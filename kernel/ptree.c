@@ -27,7 +27,9 @@ asmlinkage long sys_ptree(struct prinfo *buf, int *nr){
 	pre_order(buf_kernel, nr, &init_task,&count_process); 
 	read_unlock(&tasklist_lock);	
 	
-	copy_to_user(buf, buf_kernel, (*nr)*sizeof(struct prinfo));
+	//error check(copy_to_user)
+	if(copy_to_user(buf, buf_kernel, (*nr)*sizeof(struct prinfo)))
+		return 0;
 	if((*nr) > count_process)
 		if(copy_to_user(nr, &count_process, sizeof(int)))
 			return 0;
@@ -42,7 +44,6 @@ void pre_order(struct prinfo *buf_kernel, int *buf_size, struct task_struct *cur
 	struct task_struct* curr_next_sibling = list_entry((curr->sibling).next, struct task_struct, sibling);
 	struct list_head *cursor;
 
-	//printk("%s || %d || %ld || %d\n", curr->comm, curr->pid, curr->state, (curr->parent)->pid);
 	if( (*index) < (*buf_size)){
 		//copy to task_struct -> prinfo
 		buf_kernel[(*index)].state = curr->state;
@@ -54,15 +55,18 @@ void pre_order(struct prinfo *buf_kernel, int *buf_size, struct task_struct *cur
 	}
 	// if curr == last sibling
 	if( ((curr->sibling).next) == &((curr->parent)->children)){
-		buf_kernel[(*index)].next_sibling_pid = (curr->parent)->pid;
+		if( (*index) < (*buf_size))
+			buf_kernel[(*index)].next_sibling_pid = (curr->parent)->pid;
 	}
 	if(list_empty(&(curr->children))){
-		buf_kernel[(*index)].first_child_pid = 0;
+		if( (*index) < (*buf_size))
+			buf_kernel[(*index)].first_child_pid = 0;
 		(*index)++;
 		return;
 	}
 	else{
-		buf_kernel[(*index)].first_child_pid = curr_first_child->pid;
+		if( (*index) < (*buf_size))
+			buf_kernel[(*index)].first_child_pid = curr_first_child->pid;
 		(*index)++;
 	}
 
