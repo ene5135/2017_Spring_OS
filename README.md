@@ -176,7 +176,7 @@ modified to
 in `Linux-3.10-artik/include/linux/syscalls.h`
     
 ```c 
-Asmlinkage long sys-ptree(struct prinfo *buf, int *nr)
+asmlinkage long sys-ptree(struct prinfo *buf, int *nr)
 ```
 added.
     
