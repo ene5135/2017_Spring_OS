@@ -2,25 +2,28 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#define buf_size 500
+
+#define BUF_SIZE 500
+
 struct pid_indent{
 	int pid;
 	int indent;
 };
 
-void pr_print(struct prinfo , int );
-int push_pr(struct pid_indent *pr_stack, int *top, struct prinfo *buf,int curr);
-
+void pr_print(struct prinfo info, int indent);
+int push_pr(struct pid_indent* pr_stack, int* top, struct prinfo* buf, int curr);
 
 int main(){
 
-	int nr = buf_size;
-	struct prinfo buf[buf_size] = {0};
+	int nr = BUF_SIZE;
+	struct prinfo buf[BUF_SIZE] = {0};
 	int for_i=0;
 	long num_process=0;
-	struct pid_indent pr_stack[buf_size] = {0};
+	struct pid_indent pr_stack[BUF_SIZE] = {0};
 	int pr_stack_top = -1;
-	num_process = syscall(380, 2, &nr);
+	num_process = syscall(380, buf, &nr);
+	
+	//error check check check check is the hiphop's base
 	if(num_process == 0){
 		fprintf(stderr, "Error! : copy_to_user\n");
 		return 0;
@@ -29,12 +32,12 @@ int main(){
 		fprintf(stderr, "Error code %d\n", errno);
 		return 0;
 	}
-	//make_ptree(buf, 0, 0, nr);
+	
+	//print process tree
 	for(for_i = 0; for_i < nr; for_i++){
 		pr_print( buf[for_i], push_pr(pr_stack, &pr_stack_top,buf, for_i));
 	}
-
-
+	
 	return 1;
 }
 
@@ -47,24 +50,27 @@ void pr_print(struct prinfo info , int indent){
 			info.state, info.parent_pid, info.first_child_pid,
 			info.next_sibling_pid, info.uid);
 }
+
 int push_pr(struct pid_indent *pr_stack, int *top, struct prinfo *buf, int curr){
 
 	struct pid_indent temp;
 	temp.pid = buf[curr].pid;
+	
+	// if stack is empty
 	if ((*top) == -1){
 		temp.indent =0;
 		pr_stack[++(*top)]= temp;
 		return 0;
 	}
-	// top is parent
-	
+
+	// if top is parent
 	if (buf[curr].parent_pid == pr_stack[(*top)].pid){
 		temp.indent = pr_stack[*top].indent +1;
 		pr_stack[++(*top)]= temp;
 		return temp.indent;
 	}
 	
-	// top is not my parent
+	// top is not my parent, pop until meet parent.
 	else {
 		while(1){
 			if( (*top) ==-1)	break;
