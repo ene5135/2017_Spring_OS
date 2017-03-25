@@ -121,18 +121,34 @@ Which can be represented by following statement.
 ```c
 if(list_empty(&(curr->children)))
 ```
-    
-    "list_empty() description"
-    
+
+```c
+/**
+ * list_empty - tests whether a list is empty
+ * @head: the list to test.
+*/
+static inline int list_empty(const struct list_head *head)
+{
+         return READ_ONCE(head->next) == head;
+}
+```    
   and according to assignment spec, make `first_child_pid` 0 and return
           
 #### middle case
 
 We need to call each children with oldest order to satisfy the preorder.
 `list_for_each()` macro was very useful.
-          
-   "list_for_each() description"
-          
+
+```c
+/**
+ * list_for_each        -       iterate over a list
+ * @pos:        the &struct list_head to use as a loop cursor.
+ * @head:       the head for your list.
+*/
+#define list_for_each(pos, head) \
+        for (pos = (head)->next; pos != (head); pos = pos->next)
+```
+
 #### meaning of if( (*index) < (*buf_size))
 
 When the `index` become bigger than the buffer size, which means that the entries are more
@@ -145,12 +161,7 @@ The youngest sibling's listhead points the parent process' children listhead.
   So we shouldn't give sibling to member name parameter of `list_entry`. Instead, we must give children
    to member name parameter to get exact address.
             
-        "preorder flow chart"
-        
-        "description of list head and list_entry(container_of)"
-        
 
-      
 ## 2. Adding system call to kernel
   
 ### 2-1 `calls.S` modification
@@ -191,3 +202,5 @@ added.
 ## 3. Implementing test program
 
 ### 3-1 `test.c` implementation
+
+
