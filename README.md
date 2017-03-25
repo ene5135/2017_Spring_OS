@@ -60,17 +60,17 @@ read_unlock(&tasklist_lock);
       
 #### 1-2-4 call recursive function
  We implemented the traversing algorithm using recursive call. We defined seperate recursive
-function, `ptree_preorder()`. So in `sys_ptree()`, what we have to do is just call the `ptree_preorder`
+function, `pre_order()`. So in `sys_ptree()`, what we have to do is just call the `pre_order`
 once.
 
 ```c
-ptree_preOrder(temp_buf,nr,&init_task,&index);
+pre_order(buf_kernel,buf_size,&init_task,&count_process);
 ```   
 
-- temp_buf : It's not available to write the infomation in buf parameter directly. `temp_buf` is temporary buf which has the same size of original `buf`. By `copy_to_user()`, whole contents of `temp_buf` will be copied in `buf`.             
-- nr : The same as the nr parameter        
+- buf_kernel : It's not available to write the infomation in buf parameter directly. `buf_kernel` is temporary buf which has the same size of original `buf`. By `copy_to_user()`, whole contents of `buf_kernel` will be copied in `buf`.             
+- buf_size : The same as the nr parameter        
 - &init_task : It's the first process which is defined in sched.h. &init_task will be the root of the tree.                          
-- index : It's the index of temp_buf. When all recursive calls are finished, the # of whole entries will be saved in index.
+- count_process : It's the index of buf_kernel. When all recursive calls are finished, the # of whole entries will be saved in count_process.
       
 #### 1-2-5 copy_to_user
  `buf` and `nr`, which are passed through as parameters, are on the user space. So in kernel mode,
@@ -78,12 +78,12 @@ the parameters cannot be written. So we must use `copy_to_user()` in `uaccess.h`
 which we got in kernel mode to the user space.
       
 ```c
-copy_to_user(buf, temp_buf, sizeof(struct prinfo)*(*nr)));
+copy_to_user(buf, buf_kernel, sizeof(struct prinfo)*(*nr)));
 ```
-`prinfo`s are copied from `temp_buf` to `buf`.
+`prinfo`s are copied from `buf_kernel` to `buf`.
 
 ```c
-if(*nr > index) copy_to_user(nr, &index, sizeof(int));
+if(*nr > count_process) copy_to_user(nr, &count_process, sizeof(int));
 ```     
 If `*nr` is bigger than the # of whole entries, write the # of whole entries in `nr`.
       
@@ -95,22 +95,22 @@ If `*nr` is bigger than the # of whole entries, write the # of whole entries in 
 ### 1-3 ptree_dfs
   
 ```c
-ptree_preOrder(struct prinfo * buf, int *nr, struct task_struct * curr, int * index)
+pre_order(struct prinfo * buf_kernel, int *buf_size, struct task_struct * curr, int * index)
 ```
     
 * parameters
-   - `struct prinfo * buf` : the buffer which contains the process' informations
-   - `int *nr` : the size of buffer
+   - `struct prinfo * buf_kernel` : the buffer which contains the process' informations
+   - `int *buf_size` : the size of buffer
    - `struct task_struct * curr` : While traversing, the current process node's task struct
    - `int * index` : buf's index which points where the current process' prinfo should be written
       
  * return value
- When whole the recursive calls are finished, all the process' informations are written in `buf`
+ When whole the recursive calls are finished, all the process' informations are written in `buf_kernel`
 by preorder, and the # of entries are written in `index`.
     
  * the flow of function call
  When the function is called, process' information in `curr` will be the indexth element of
-`buf` and `*index` will increment. After that, recursive calls will be executed according to 
+`buf_kernel` and `*index` will increment. After that, recursive calls will be executed according to 
 the cases below.
       
 #### leaf case
@@ -119,7 +119,7 @@ If curr node doesn't have any child process, the curr node is leaf node.
 Which can be represented by following statement.
   
 ```c
-list_empty(&(curr->children))==true
+if(list_empty(&(curr->children)))
 ```
     
     "list_empty() description"
@@ -133,7 +133,7 @@ We need to call each children with oldest order to satisfy the preorder.
           
    "list_for_each() description"
           
-#### meaning of (*index <= *nr)
+#### meaning of if( (*index) < (*buf_size))
 
 When the `index` become bigger than the buffer size, which means that the entries are more
  than the size of buffer, we don't write the values in the buffer 
