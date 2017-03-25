@@ -94,7 +94,9 @@ If `*nr` is bigger than the # of whole entries, write the # of whole entries in 
       
 ### 1-3 ptree_dfs
   
-`ptree_preOrder()`
+```c
+ptree_preOrder()
+```
     
 * parameters
    - `struct prinfo * buf` : the buffer which contains the process' informations
