@@ -1,12 +1,12 @@
 
-#Project 01
+# Project 01
 
-##Wrting system call and adding to kernel
+## Wrting system call and adding to kernel
 
-###Introduction
+### Introduction
 This assignment includes implementing a new system call, `ptree()` in Linux. It returns the process tree information in depth-first-search order. To check whether the returned tree information is correct, we write a simple C program which calls `ptree()` system call. The program prints the entire process tree in pre-order using tabs to indent children with respect to their parents.
 
-##Implementation
+### Implementation
 
 1. Writing system call
   1-1 `prinfo`
@@ -22,7 +22,8 @@ struct prinfo {
       pid_t next_sibling_pid; /* pid of younger sibling */
       long uid;               /* user id of process owner */
       char commm[64];         /* name of program executed */
-      };```
+      };
+```
     
     We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
   
@@ -31,32 +32,33 @@ struct prinfo {
     
     1-2-1 return value
       `sys_ptree()` returns the number of process entry or error number. Also `ays_ptree()` puts process 
-      entries informations in buf by preorder and actual size of buf in nr.
+      entries informations in `buf` by preorder and actual size of `buf` in `nr`.
     
     1-2-2 error check
       Before the specific implementation, the system call checks for the input arguments whether 
       they are correct or not. Mainly, there are four error cases. So we handle the errors by 
       four steps below.
       
-      1. When the arguments (buf, nr) have NULL value : return -EINVAL;
-      2. When the nr's address is not accessible.     : return -EFAULT;
-      3. When the # of entries(*nr) is less than 1    : return -EINVAL;
-      4. When the buf's address is not accessible.    : return -EFAULT;
-        - In fourth step, we used access_ok macro which is defined in uaccess.h
+      1. When the arguments (`buf`, `nr`) have NULL value : return `-EINVAL`;
+      2. When the nr's address is not accessible.     : return `-EFAULT`;
+      3. When the number of entries(`*nr`) is less than 1    : return `-EINVAL`;
+      4. When the buf's address is not accessible.    : return `-EFAULT`;
+        - In fourth step, we used `access_ok` macro which is defined in `uaccess.h`
         
         <whole definition of access_ok macro>
         
-    1-2-3 read_lock, read_unlock
+    1-2-3 `read_lock`, `read_unlock`
     
-      We will traverse all the task_structs of whole processes at certain moment. Thus we need to
+      We will traverse all the `task_struct`s of whole processes at certain moment. Thus we need to
       lock the task list to avoid modification of the process' informations. We locked the tasklist
-      using read_lock() until the traverse finishes. After the traverse is finished, we unlocked it
-      by read_unlock.
+      using `read_lock()` until the traverse finishes. After the traverse is finished, we unlocked it
+      by `read_unlock()`.
       
+      ```c
       read_lock(&tasklist_lock);
       /* do the job... */
       read_unlock(&tasklist_lock);
-
+      ```
       
     1-2-4 call recursive function
       We implemented the traversing algorithm using recursive call. We defined seperate recursive
