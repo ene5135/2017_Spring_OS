@@ -95,7 +95,7 @@ If `*nr` is bigger than the # of whole entries, write the # of whole entries in 
 ### 1-3 ptree_dfs
   
 ```c
-ptree_preOrder()
+ptree_preOrder(struct prinfo * buf, int *nr, struct task_struct * curr, int * index)
 ```
     
 * parameters
