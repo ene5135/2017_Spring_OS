@@ -1,19 +1,20 @@
 
-Project 01
+#Project 01
 
-Wrting system call and adding to kernel
+##Wrting system call and adding to kernel
 
-Introduction
-This assignment includes implementing a new system call, ptree() in Linux. It returns the process tree information in depth-first-search order. To check whether the returned tree information is correct, we write a simple C program which calls ptree() system call. The program prints the entire process tree in pre-order using tabs to indent children with respect to their parents.
+###Introduction
+This assignment includes implementing a new system call, `ptree()` in Linux. It returns the process tree information in depth-first-search order. To check whether the returned tree information is correct, we write a simple C program which calls `ptree()` system call. The program prints the entire process tree in pre-order using tabs to indent children with respect to their parents.
 
-Implementation
+##Implementation
 
 1. Writing system call
-  1-1 prinfo
-    We used prinfo structure to save the process information while traversing the process tree.
+  1-1 `prinfo`
+    We used `prinfo` structure to save the process information while traversing the process tree.
     There is a struct description below.
     
-    struct prinfo {
+```c    
+struct prinfo {
       long state;             /* current state of process */
       pid_t pid;              /* process id */
       pid_t parent_pid;       /* process id of parent */
@@ -21,15 +22,15 @@ Implementation
       pid_t next_sibling_pid; /* pid of younger sibling */
       long uid;               /* user id of process owner */
       char commm[64];         /* name of program executed */
-    };
+      };```
     
-    We declared the description in prinfo.h and included the file in include/linux as part of our solution.
+    We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
   
-  1-2 ptree
-    ptree.c is the main part of this project. There is whole description of sys_ptree() system call.
+  1-2 `ptree`
+    `ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
     
     1-2-1 return value
-      sys_ptree() returns the # of process entry or error number. Also ays_ptree() puts process 
+      `sys_ptree()` returns the number of process entry or error number. Also `ays_ptree()` puts process 
       entries informations in buf by preorder and actual size of buf in nr.
     
     1-2-2 error check
