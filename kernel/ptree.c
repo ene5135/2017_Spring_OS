@@ -29,10 +29,18 @@ asmlinkage long sys_ptree(struct prinfo *buf, int *nr){
 	
 	//error check(copy_to_user)
 	if(copy_to_user(buf, buf_kernel, (*nr)*sizeof(struct prinfo)))
+	{
+		kfree(buf_kernel);
 		return 0;
+	}
 	if((*nr) > count_process)
+	{
 		if(copy_to_user(nr, &count_process, sizeof(int)))
+		{
+			kfree(buf_kernel);
 			return 0;
+		}
+	}
 	
 	kfree(buf_kernel);
 	return count_process;
