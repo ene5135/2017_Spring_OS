@@ -9,7 +9,7 @@
 ### Implementation
 
 #### 1. Writing system call
-##### 1-1 `prinfo`
+##### 1-1 prinfo
  We used `prinfo` structure to save the process information while traversing the process tree.
 There is a struct description below.
     
@@ -24,48 +24,49 @@ struct prinfo {
       char commm[64];         /* name of program executed */
       };
 ```
-We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
+ We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
   
-##### 1-2 `ptree`
-`ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
+##### 1-2 ptree
+ `ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
     
 ###### 1-2-1 return value
-      `sys_ptree()` returns the number of process entry or error number. Also `ays_ptree()` puts process 
-      entries informations in `buf` by preorder and actual size of `buf` in `nr`.
+ `sys_ptree()` returns the number of process entry or error number. Also `sys_ptree()` puts process 
+entries informations in `buf` by preorder and actual size of `buf` in `nr`.
     
-    1-2-2 error check
-      Before the specific implementation, the system call checks for the input arguments whether 
-      they are correct or not. Mainly, there are four error cases. So we handle the errors by 
-      four steps below.
+###### 1-2-2 error check
+ Before the specific implementation, the system call checks for the input arguments whether 
+they are correct or not. Mainly, there are four error cases. So we handle the errors by 
+four steps below.
       
-      1. When the arguments (`buf`, `nr`) have NULL value : return `-EINVAL`;
-      2. When the nr's address is not accessible.     : return `-EFAULT`;
-      3. When the number of entries(`*nr`) is less than 1    : return `-EINVAL`;
-      4. When the buf's address is not accessible.    : return `-EFAULT`;
-        - In fourth step, we used `access_ok` macro which is defined in `uaccess.h`
+   1. When the arguments (`buf`, `nr`) have NULL value : return `-EINVAL`;
+   2. When the nr's address is not accessible.     : return `-EFAULT`;
+   3. When the number of entries(`*nr`) is less than 1    : return `-EINVAL`;
+   4. When the buf's address is not accessible.    : return `-EFAULT`;
+      - In fourth step, we used `access_ok` macro which is defined in `uaccess.h`
         
         <whole definition of access_ok macro>
-        
-    1-2-3 `read_lock`, `read_unlock`
-    
-      We will traverse all the `task_struct`s of whole processes at certain moment. Thus we need to
-      lock the task list to avoid modification of the process' informations. We locked the tasklist
-      using `read_lock()` until the traverse finishes. After the traverse is finished, we unlocked it
-      by `read_unlock()`.
+ 
+###### 1-2-3 read_lock, read_unlock
+ We will traverse all the `task_struct`s of whole processes at certain moment. Thus we need to
+lock the task list to avoid modification of the process' informations. We locked the tasklist
+using `read_lock()` until the traverse finishes. After the traverse is finished, we unlocked it
+by `read_unlock()`.
       
-      ```c
-      read_lock(&tasklist_lock);
-      /* do the job... */
-      read_unlock(&tasklist_lock);
-      ```
+```c
+read_lock(&tasklist_lock);
+ /* do the job... */
+read_unlock(&tasklist_lock);
+```
       
-    1-2-4 call recursive function
-      We implemented the traversing algorithm using recursive call. We defined seperate recursive
-      function, ptree_preorder(). So in sys_ptree(), what we have to do is just call the ptree_preorder
-      once.
-      
-      <ptree_preOrder(temp_buf,nr,&init_task,&index);>
-      
+###### 1-2-4 call recursive function
+ We implemented the traversing algorithm using recursive call. We defined seperate recursive
+function, ptree_preorder(). So in sys_ptree(), what we have to do is just call the ptree_preorder
+once.
+
+```c
+ptree_preOrder(temp_buf,nr,&init_task,&index);
+```   
+
       temp_buf : It's not available to write the infomation in buf parameter directly.
                  temp_buf is temporary buf which has the same size of original buf.
                  By copy_to_user(), whole contents of temp_buf will be copied in buf.
@@ -75,10 +76,10 @@ We declared the description in prinfo.h and included the file in `include/linux`
       index : It's the index of temp_buf. When all recursive calls are finished, 
               the # of whole entries will be saved in index.
       
-    1-2-5 copy_to_user
-       buf and nr, which are passed through as parameters, are on the user space. So in kernel mode,
-      the parameters cannot be written. So we must use copy_to_user() in uaccess.h to copy the informations
-      which we got in kernel mode to the user space.
+###### 1-2-5 copy_to_user
+ buf and nr, which are passed through as parameters, are on the user space. So in kernel mode,
+the parameters cannot be written. So we must use copy_to_user() in uaccess.h to copy the informations
+which we got in kernel mode to the user space.
       
       copy_to_user(buf, temp_buf, sizeof(struct prinfo)*(*nr)));
       
