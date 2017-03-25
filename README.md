@@ -111,33 +111,33 @@ by preorder, and the # of entries are written in `index`.
 `buf` and `*index` will increment. After that, recursive calls will be executed according to 
 the cases below.
       
-- leaf case
+##### leaf case
 
 If curr node doesn't have any child process, the curr node is leaf node.
 Which can be represented by following statement.
   
-    ```c
-    list_empty(&(curr->children))==true
-    ```
+```c
+list_empty(&(curr->children))==true
+```
     
     "list_empty() description"
     
   and according to assignment spec, make `first_child_pid` 0 and return
           
-- middle case
+##### middle case
 
 We need to call each children with oldest order to satisfy the preorder.
 `list_for_each()` macro was very useful.
           
    "list_for_each() description"
           
-- meaning of (*index <= *nr)
+##### meaning of (*index <= *nr)
 
 When the `index` become bigger than the buffer size, which means that the entries are more
  than the size of buffer, we don't write the values in the buffer 
  but only increments the `index` value.
             
-- handling the case when `curr` process is youngest sibling
+##### handling the case when `curr` process is youngest sibling
 
 The youngest sibling's listhead points the parent process' children listhead.
   So we shouldn't give sibling to member name parameter of `list_entry`. Instead, we must give children
