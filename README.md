@@ -24,8 +24,7 @@ struct prinfo {
       char commm[64];         /* name of program executed */
       };
 ```
-    
-    We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
+We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
   
   1-2 `ptree`
     `ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
