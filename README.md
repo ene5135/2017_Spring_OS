@@ -4,14 +4,14 @@
 ## Wrting system call and adding to kernel
 
 ### Introduction
-This assignment includes implementing a new system call, `ptree()` in Linux. It returns the process tree information in depth-first-search order. To check whether the returned tree information is correct, we write a simple C program which calls `ptree()` system call. The program prints the entire process tree in pre-order using tabs to indent children with respect to their parents.
+ This assignment includes implementing a new system call, `ptree()` in Linux. It returns the process tree information in depth-first-search order. To check whether the returned tree information is correct, we write a simple C program which calls `ptree()` system call. The program prints the entire process tree in pre-order using tabs to indent children with respect to their parents.
 
 ### Implementation
 
-1. Writing system call
-  1-1 `prinfo`
-    We used `prinfo` structure to save the process information while traversing the process tree.
-    There is a struct description below.
+#### 1. Writing system call
+##### 1-1 `prinfo`
+ We used `prinfo` structure to save the process information while traversing the process tree.
+There is a struct description below.
     
 ```c    
 struct prinfo {
@@ -26,10 +26,10 @@ struct prinfo {
 ```
 We declared the description in prinfo.h and included the file in `include/linux` as part of our solution.
   
-  1-2 `ptree`
-    `ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
+##### 1-2 `ptree`
+`ptree.c` is the main part of this project. There is whole description of `sys_ptree()` system call.
     
-    1-2-1 return value
+###### 1-2-1 return value
       `sys_ptree()` returns the number of process entry or error number. Also `ays_ptree()` puts process 
       entries informations in `buf` by preorder and actual size of `buf` in `nr`.
     
