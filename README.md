@@ -42,9 +42,9 @@ four steps below.
    2. When the nr's address is not accessible.     : return `-EFAULT`;
    3. When the number of entries(`*nr`) is less than 1    : return `-EINVAL`;
    4. When the buf's address is not accessible.    : return `-EFAULT`;
-      - In fourth step, we used `access_ok` macro which is defined in `uaccess.h`
+      - In second and fourth step, we used `access_ok` macro which is defined in `uaccess.h`
         
-        <whole definition of access_ok macro>
+        "definition of access_ok macro"
  
 ##### 1-2-3 read_lock, read_unlock
  We will traverse all the `task_struct`s of whole processes at certain moment. Thus we need to
@@ -115,12 +115,13 @@ by preorder, and the # of entries are written in `index`.
 `buf` and `*index` will increment. After that, recursive calls will be executed according to 
 the cases below.
       
-        - leaf case
-          If curr node doesn't have any child process, the curr node is leaf node.
-          Which can be represented by following statement.
-          
-          list_empty(&(curr->children))==true
-          
+   + leaf case
+    If curr node doesn't have any child process, the curr node is leaf node.
+    Which can be represented by following statement.
+    
+    ```c
+    list_empty(&(curr->children))==true
+    ```     
           make first_child_pid 0 and return
           
         - middle case
