@@ -80,7 +80,7 @@ which we got in kernel mode to the user space.
 ```c
 copy_to_user(buf, temp_buf, sizeof(struct prinfo)*(*nr)));
 ```
-prinfos are copied from temp_buf to buf.
+`prinfo`s are copied from `temp_buf` to `buf`.
 
 ```c
 if(*nr > index) copy_to_user(nr, &index, sizeof(int));
