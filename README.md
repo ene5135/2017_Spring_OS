@@ -201,6 +201,81 @@ added.
     
 ## 3. Implementing test program
 
-### 3-1 `test.c` implementation
+### 3-1 `test.c` error check
+```c
+num_process = syscall(380,buf,&nr);
+```
+syscall ptree(380) return value is the number of process.
+if error ocurred, 0 or < 0 is returned.
 
-We use 
+### 3-2 'test.c' print by stack-concept
+we print process tree by stack-concept.
+stack's element is pid-indent.
+```c
+struct pid_indent{
+	int pid;
+	int indent;
+};
+```
+main function calls push_pr by for-loop.
+```c
+for(for_i = 0; for_i < nr; for_i++){
+		pr_print( buf[for_i], push_pr(pr_stack, &pr_stack_top,buf, for_i));
+}
+```
+push_pr return value of indent of current prinfo.
+
+First, stack is empty.
+just into stack.
+```c
+if ((*top) == -1){
+		temp.indent =0;
+		pr_stack[++(*top)]= temp;
+		return 0;
+}
+```
+
+Second, meet parent.
+current indent is parent indent+1. 
+and push into stack.
+```c
+if (buf[curr].parent_pid == pr_stack[(*top)].pid){
+		temp.indent = pr_stack[*top].indent +1;
+		pr_stack[++(*top)]= temp;
+		return temp.indent;
+	}
+ ```
+ 
+Third, if top is not parent, not bottom. (sibling)
+pop stack top until meet parent. (actually, sibling is just one stack).
+```c
+	else {
+		 while(1){
+			  if( (*top) ==-1)	break;
+			  if( pr_stack[*top].pid == buf[curr].parent_pid){
+			 	  temp.indent = pr_stack[*top].indent+1;
+			 	  pr_stack[++(*top)] = temp;
+			 	 return temp.indent;
+			  }
+			  else{
+			 	(*top)--;
+			  }
+		 }
+	}
+ ```
+
+Last, indent print.
+tap the number of indent count.
+and print.
+```c
+void pr_print(struct prinfo info , int indent){
+	int i;
+	for(i =0; i<indent; i++){
+		printf("\t");
+	}
+	printf("%s,%d,%ld,%d,%d,%d,%ld\n", info.comm, info.pid,
+			info.state, info.parent_pid, info.first_child_pid,
+			info.next_sibling_pid, info.uid);
+}
+```
+# Thank you.
