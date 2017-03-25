@@ -69,10 +69,13 @@ ptree_preOrder(temp_buf,nr,&init_task,&index);
 
   temp_buf : It's not available to write the infomation in buf parameter directly.
              temp_buf is temporary buf which has the same size of original buf.
-             By copy_to_user(), whole contents of temp_buf will be copied in buf.          
+             By copy_to_user(), whole contents of temp_buf will be copied in buf.  
+             
         nr : The same as the nr parameter
+        
 &init_task : It's the first process which is defined in sched.h. 
              &init_task will be the root of the tree.             
+             
      index : It's the index of temp_buf. When all recursive calls are finished, 
              the # of whole entries will be saved in index.
       
@@ -118,65 +121,71 @@ the cases below.
    + leaf case
     If curr node doesn't have any child process, the curr node is leaf node.
     Which can be represented by following statement.
-    
     ```c
     list_empty(&(curr->children))==true
     ```     
-          make first_child_pid 0 and return
+    "list_empty() description"
+    
+    and according to assignment spec, make `first_child_pid` 0 and return
           
-        - middle case
-          We need to call each children with oldest order to satisfy the preorder.
-          list_for_each() macro was very useful.
+   + middle case
+    We need to call each children with oldest order to satisfy the preorder.
+    `list_for_each()` macro was very useful.
           
-          <list_for_each() description>
+     "list_for_each() description"
           
-          ** meaning of (*index <= *nr)
-            When the index become bigger than the buffer size, which means that the entries are more
-            than the size of buffer, we don't write the values in the buffer 
-            but only increments the index value.
+       ** meaning of (*index <= *nr)
+           When the `index` become bigger than the buffer size, which means that the entries are more
+          than the size of buffer, we don't write the values in the buffer 
+          but only increments the `index` value.
             
-          ** handling the case when curr process is youngest sibling
-            The youngest sibling's listhead points the parent process' children listhead.
-            So we shouldn't give sibling to parameter of list_entry. Instead, we must give children
-            to parameter to get exact address.
+       ** handling the case when `curr` process is youngest sibling
+           The youngest sibling's listhead points the parent process' children listhead.
+          So we shouldn't give sibling to member name parameter of `list_entry`. Instead, we must give children
+          to member name parameter to get exact address.
             
-        <preorder flow chart>
-        description of list head and list_entry(container_of)
+        "preorder flow chart"
+        
+        "description of list head and list_entry(container_of)"
         
 
       
-2. Adding system call to kernel
+### 2. Adding system call to kernel
   
-  2-1 calls.S modification
-    in Linux-3.10-artik/arch/arm/kernel/calls.S
+#### 2-1 `calls.S` modification
+   in `Linux-3.10-artik/arch/arm/kernel/calls.S`
     
-    CALL(sys_ptree) 
-    
+   ```c 
+   CALL(sys_ptree) 
+   ``` 
     added.
     
-  2-2 unistd.h modification
-    in Linux-3.10-artik/arch/arm/include/asm/unistd.h
+#### 2-2 `unistd.h` modification
+   in `Linux-3.10-artik/arch/arm/include/asm/unistd.h`
     
+    ```c
     #define __NR_syscalls (380)
-    
+    ```
     modified to
-    
+    ```c
     #define __NR_syscalls (384)
+   ``` 
+#### 2-3 `syscalls.h` modification
+   in `Linux-3.10-artik/include/linux/syscalls.h`
     
-  2-3 syscalls.h modification
-    in Linux-3.10-artik/include/linux/syscalls.h
-    
+    ```c
     Asmlinkage long sys-ptree(struct prinfo *buf, int *nr)
-    
+    ```
     added.
     
-  2-4 Makefile modification
-    in Linux-3.10-artik/kernel/Makefile
+#### 2-4 `Makefile` modification
+   in `Linux-3.10-artik/kernel/Makefile`
     
+    ```c
     Obj-y = ......... ptree.o 
+    ```
+    added.
     
-    added
-    
-3. Implementing test program
+### 3. Implementing test program
 
-  3-1 test.c implementation
+#### 3-1 `test.c` implementation
