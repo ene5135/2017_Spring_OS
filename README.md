@@ -137,7 +137,7 @@ static inline int list_empty(const struct list_head *head)
 #### middle case
 
 We need to call each children with oldest order to satisfy the preorder.
-`list_for_each()` macro was very useful.
+We just simply used `list_for_each()` for calling all each children.
 
 ```c
 /**
@@ -203,4 +203,4 @@ added.
 
 ### 3-1 `test.c` implementation
 
-
+We use 
