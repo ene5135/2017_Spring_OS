@@ -20,13 +20,14 @@ int main(){
 	long num_process=0;
 	struct pid_indent pr_stack[buf_size] = {0};
 	int pr_stack_top = -1;
-	num_process = syscall(380, buf, &nr);
+	num_process = syscall(380, 2, &nr);
 	if(num_process == 0){
 		fprintf(stderr, "Error! : copy_to_user\n");
+		return 0;
 	}
 	if(num_process < 0){
 		fprintf(stderr, "Error code %d\n", errno);
-		return 1;
+		return 0;
 	}
 	//make_ptree(buf, 0, 0, nr);
 	for(for_i = 0; for_i < nr; for_i++){
@@ -34,7 +35,7 @@ int main(){
 	}
 
 
-	return 0;
+	return 1;
 }
 
 void pr_print(struct prinfo info , int indent){

@@ -1,4 +1,6 @@
-struct prinfo {
+#include <linux/types.h>
+
+struct prinfo{
 	long state;
 	pid_t pid;
 	pid_t parent_pid;
