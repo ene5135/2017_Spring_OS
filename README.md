@@ -67,14 +67,14 @@ once.
 ptree_preOrder(temp_buf,nr,&init_task,&index);
 ```   
 
-      temp_buf : It's not available to write the infomation in buf parameter directly.
-                 temp_buf is temporary buf which has the same size of original buf.
-                 By copy_to_user(), whole contents of temp_buf will be copied in buf.
-      nr : The same as the nr parameter
-      &init_task : It's the first process which is defined in sched.h. 
-                   &init_task will be the root of the tree.
-      index : It's the index of temp_buf. When all recursive calls are finished, 
-              the # of whole entries will be saved in index.
+  temp_buf : It's not available to write the infomation in buf parameter directly.
+             temp_buf is temporary buf which has the same size of original buf.
+             By copy_to_user(), whole contents of temp_buf will be copied in buf.          
+        nr : The same as the nr parameter
+&init_task : It's the first process which is defined in sched.h. 
+             &init_task will be the root of the tree.             
+     index : It's the index of temp_buf. When all recursive calls are finished, 
+             the # of whole entries will be saved in index.
       
 ##### 1-2-5 copy_to_user
  `buf` and `nr`, which are passed through as parameters, are on the user space. So in kernel mode,
@@ -91,29 +91,29 @@ if(*nr > index) copy_to_user(nr, &index, sizeof(int));
 ```     
 If `*nr` is bigger than the # of whole entries, write the # of whole entries in `nr`.
       
-    * copy_to_user error handling : `sys_ptree()` returns 0 when the error is occurred in `copy_to_user.`
-                                    This wasn't mentioned in specification of the project, but it can
-                                    occur serious problems in system call execution so we decided to 
-                                    include error handling for this case too.
+* copy_to_user error handling : `sys_ptree()` returns 0 when the error is occurred in `copy_to_user.`
+                                This wasn't mentioned in specification of the project, but it can
+                                occur serious problems in system call execution so we decided to 
+                                include error handling for this case too.
       
-  1-3 ptree_dfs
+#### 1-3 ptree_dfs
   
-    ptree_preOrder()
+`ptree_preOrder()`
     
-    parameters
-      - struct prinfo * buf : the buffer which contains the process' informations
-      - int *nr : the size of buffer
-      - struct task_struct * curr : While traversing, the current process node's task struct
-      - int * index : buf's index which points where the current process' prinfo should be written
+* parameters
+   - `struct prinfo * buf` : the buffer which contains the process' informations
+   - `int *nr` : the size of buffer
+   - `struct task_struct * curr` : While traversing, the current process node's task struct
+   - `int * index` : buf's index which points where the current process' prinfo should be written
       
-    return value
-      When whole the recursive calls are finished, all the process' informations are written in buf
-    by preorder, and the # of entries are written in index.
+ * return value
+ When whole the recursive calls are finished, all the process' informations are written in `buf`
+by preorder, and the # of entries are written in `index`.
     
-    the flow of function call
-      When the function is called, process' information in curr will be the indexth element of
-      buf and *index will increment. After that, recursive calls will be executed according to 
-      the cases below.
+ * the flow of function call
+ When the function is called, process' information in `curr` will be the indexth element of
+`buf` and `*index` will increment. After that, recursive calls will be executed according to 
+the cases below.
       
         - leaf case
           If curr node doesn't have any child process, the curr node is leaf node.
