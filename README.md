@@ -278,4 +278,12 @@ void pr_print(struct prinfo info , int indent){
 			info.next_sibling_pid, info.uid);
 }
 ```
+# Lessons learned
+## System call implementation
+We've already done programming pretty much while going through another comp.sci courses, but not in the operating system. Implementing and modifing our own system call was a very new kind of challenge. The system call should not enter into forbidden memory area, and must be terminated at any kind of situations. Otherwise, the kernel goes into panic and whole the device stops. It was the most tricky part to guarantee that kernel never fails. Also, we had to notify that our new system call came in to kernel and therefore, we had to update the system call table.
+## Brand new data structure : task_struct & Doubly linked list in linux kernel
+Using struct list_head instead of implementing normal linked list makes handling dynamic memory address issues more comfortable. There is no need to allocate the memory each time for new element. Just put the list_head inside the struct makes neatly organized linked list. Then how can we find out the exact address where the structure is allocated? container_of(), which is a macro implemented in kernel.h returns the exact address of the structure by getting the list_head's address and the variable name of the list_head inside the struct. task_struct's hierachy is represented by the list_head. The list_head named children points the first child's list_head which is named sibling. And the sibling list_head points the next list_head which is also named sibling. Finally, the sibling list_head points the children list_head of it's parent task_struct. This structure makes traverse more simple and comfortable.
+## Cooperating
+In this project, actually we didn't seperated each of member's task. Instead, we went through the whole project parallely in each one's environment. Our cooperating in this project was just be gathered in same space and talking about the tricky parts while doing the project in each one's labtop. In other words, we three people done the same thing repeatedly. So we could understand every implementation about this project, but it took quiet much time. Therefore, we've decided to seperate the tasks and go through the project 'concurrently' in next projects. Then, maybe we can reserve the implementation time much shorter and it's the real 'cooperating'.
+
 # Thank you.
