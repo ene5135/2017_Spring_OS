@@ -389,6 +389,9 @@
 		CALL(sys_process_vm_writev)
 		CALL(sys_kcmp)
 		CALL(sys_finit_module)
+
+
+
 /* 380 */	CALL(sys_set_rotation)
 		CALL(sys_rotlock_read)
 		CALL(sys_rotlock_write)

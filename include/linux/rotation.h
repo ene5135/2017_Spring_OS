@@ -1,14 +1,15 @@
-#include <linux/unistd.h>
-#include <linux/list.h>
 
-#define READ 0
-#define WRITE 1
+#include<linux/types.h>
 
-struct proc_lock_info {
+struct proc_lock_info
+{
 	pid_t pid;
-	list_head * next;
+	int range;
 	int degree;
-	int rotation;
 	int type;
+	struct list_head sibling;
 };
+
+int set_rotation(int degree);	/* 0 <= degree < 360 */
+void rescheduler();
 
