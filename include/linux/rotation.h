@@ -1,3 +1,4 @@
+
 #include<linux/types.h>
 
 struct proc_lock_info
@@ -11,3 +12,4 @@ struct proc_lock_info
 
 int set_rotation(int degree);	/* 0 <= degree < 360 */
 void rescheduler();
+
