@@ -12,7 +12,7 @@ struct proc_lock_info
 	struct list_head sibling;
 };
 
-//void rescheduler();
+void rescheduler(void);
 
 int check_acquiring_list(int degree, int range, struct proc_lock_info * new_proc);
 int is_writer(struct proc_lock_info * pli);

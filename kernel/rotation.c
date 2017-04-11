@@ -34,7 +34,7 @@ asmlinkage long sys_set_rotation(int degree)
 	
 	printk("Current degree is %d\n",global_rotation);
 
-//	rescheduler();
+	rescheduler();
 
 	spin_unlock(&global_lock);
 	
@@ -57,7 +57,6 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 	new_proc->type = READ;
 	new_proc->task = current;
 	INIT_LIST_HEAD(&(new_proc->sibling));
-
 
 	spin_lock(&global_lock);
 	
@@ -98,7 +97,7 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 		
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule();
-
+		
 		/*
 		remove_wait_queue
 		wake_up_process
@@ -108,10 +107,61 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 		wait_queue_head_t
 		wait_event();*/ 
 	}
-	printk("Good moring\n");
+	//printk("Good moring\n");
 
 	return 0;
 }
+
+asmlinkage long sys_rotunlock_read(int degree, int range) 
+{
+	struct proc_lock_info * cursor;
+
+	spin_lock(&global_lock);
+	
+	list_for_each_entry(cursor, &acquiring_list_head, sibling) // ac 리스트를 돌면서 현 프로세스의 proc_lock_info를 찾고 지운다.
+	{
+		if(cursor->task == current)
+		{
+			list_del(&(cursor->sibling));
+			kfree(cursor);
+			break;
+		}
+	}
+
+	rescheduler();
+
+	spin_unlock(&global_lock);
+
+	return 0;
+}
+
+void rescheduler(void)
+{
+	struct proc_lock_info * cursor;
+	struct proc_lock_info * temp;
+	printk("rescheduler\n");	
+	list_for_each_entry_safe(cursor, temp, &waiting_list_head, sibling)
+	{
+		printk("entry search\n");
+		if(is_in_range(cursor->degree, cursor->range, global_rotation)) // 현재 각도를 보고 락 범위안에 포함되는지 판단
+		{
+			if(check_acquiring_list(cursor->degree, cursor->range, cursor))
+			{	
+				printk("in if\n");
+				list_del(&(cursor->sibling));
+				list_add_tail(&(cursor->sibling), &acquiring_list_head);
+				wake_up_process(cursor->task);
+				printk("one if end\n");
+			}
+
+		}
+	}		
+	return;
+	//!! 각 리스트에 있는 애들중에 갑자기 죽은애들이 있는지도 매번 확인해줘야함
+}
+
+
+
 
 /*
  * acquiring_list 를 확인하고 lock 을 잡을수 있으면 return 1, 아니면 0
@@ -231,33 +281,7 @@ int is_in_range(int degree, int range, int rotation)
  *
  */
 
-/*
-void rescheduler()
-{
 
-	1. updating part ------------ X !!it will be done in caller function
-
-	2. rescheduling part
-	struct proc_lock_info * cursor;
-	int lower = 0, upper = 0;
-	macro(cursor : waiting_list) // traverse waiting list
-	{
-		cursor->degree - cursor->range = lower;
-		cursor->degree + cursor->range = upper;
-		if(global_rotation < upper && global_rotation > lower) // check if the global_rotation fits in range.
-		{
-			if(check_acquiring_list(cursor->degree,cursor->range) <= 0) // check if there already exist acquiring lock in range
-			{
-				wake_up(cursor);
-			}
-		}
-	}	
-	
-	!! 각 리스트에 있는 애들중에 갑자기 죽은애들이 있는지도 매번 확인해줘야함
-
-}
-
-*/
 
 asmlinkage long sys_rotlock_write(int degree, int range) 
 {
@@ -265,11 +289,7 @@ asmlinkage long sys_rotlock_write(int degree, int range)
 			return 0;
 }
 
-asmlinkage long sys_rotunlock_read(int degree, int range) 
-{
-	wake_up_process(temp);
-			return 0;
-}
+
 
 asmlinkage long sys_rotunlock_write(int degree, int range) 
 {
