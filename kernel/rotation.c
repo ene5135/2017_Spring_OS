@@ -4,7 +4,7 @@
 #include<linux/printk.h>
 #include<linux/spinlock.h>
 #include<linux/list.h>
-#include<list/sched.h>
+#include<linux/sched.h>
 #include<asm-generic/current.h>
 #include<linux/wait.h>
 
@@ -25,7 +25,6 @@ LIST_HEAD(acquiring_list_head);
 
 DEFINE_SPINLOCK(global_lock);
 
-
 asmlinkage long sys_set_rotation(int degree)
 {
 
@@ -35,7 +34,7 @@ asmlinkage long sys_set_rotation(int degree)
 	
 	printk("Current degree is %d\n",global_rotation);
 
-	rescheduler();
+//	rescheduler();
 
 	spin_unlock(&global_lock);
 	
@@ -49,15 +48,16 @@ asmlinkage long sys_set_rotation(int degree)
  * returning 0 on success, -1 on failure.
  * system call numbers 381 and 382
  */
-asmlinkage long sys_rotlock_read(int degree, int range);	/* 0 <= degree < 360 , 0 < range < 180 */
+asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0 < range < 180 */
 {	
 	int should_I_sleep = 0;
 	struct proc_lock_info * new_proc = kmalloc(sizeof(struct proc_lock_info), GFP_KERNEL); // !!나중에 리스트에서없엘때 꼭 프리해줄것
 	new_proc->degree = degree;
 	new_proc->range = range;
 	new_proc->type = READ;
-	new_proc->pid = current->pid;
+	new_proc->task = current;
 	INIT_LIST_HEAD(&(new_proc->sibling));
+
 
 	spin_lock(&global_lock);
 	
@@ -85,14 +85,22 @@ asmlinkage long sys_rotlock_read(int degree, int range);	/* 0 <= degree < 360 , 
 	{
 		// wait_list에 추가
 		list_add_tail(&(new_proc->sibling), &waiting_list_head);
-
+		
 		should_I_sleep = 1;
 	}
 
 	spin_unlock(&global_lock);
 
 	if(should_I_sleep)
-	{/*
+	{
+
+		printk("I am sleeping now zZZ\n");
+		
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+
+		/*
+		remove_wait_queue
 		wake_up_process
 		sleep_on
 		wake_up
@@ -100,6 +108,8 @@ asmlinkage long sys_rotlock_read(int degree, int range);	/* 0 <= degree < 360 , 
 		wait_queue_head_t
 		wait_event();*/ 
 	}
+	printk("Good moring\n");
+
 	return 0;
 }
 
@@ -108,7 +118,7 @@ asmlinkage long sys_rotlock_read(int degree, int range);	/* 0 <= degree < 360 , 
  *
  */
 
-int check_acquiring_list(int degree, int range, struct proc_lock_info new_proc)
+int check_acquiring_list(int degree, int range, struct proc_lock_info *new_proc)
 {
 	struct proc_lock_info * cursor;
 	//if(list_empty(&acquiring_list_head))  // acquiring_list 가 비어있다면 락을 잡을수 있다.
@@ -116,7 +126,7 @@ int check_acquiring_list(int degree, int range, struct proc_lock_info new_proc)
 
 	//else // 비어있지 않다면
 	//{
-		list_for_each_entry(cursor, acquiring_list->sibling, sibling) // 리스트를 돌면서
+		list_for_each_entry(cursor, &acquiring_list_head, sibling) // 리스트를 돌면서
 		{
 			if(is_overwrapped(cursor->degree,cursor->range, degree,range)) // 자기 범위와 겹치는 애가 있는지 확인하고
 			{
@@ -155,9 +165,11 @@ int is_overwrapped(int d1, int r1, int d2, int r2)
 {
 
 	int upper1 = (d1+r1)%360; 
-	int lower1 = (d1-r1)%360;
+	int lower1 = (d1-r1+360)%360;
 	int upper2 = (d2+r2)%360;
-	int lower2 = (d2-r2)%360;
+	int lower2 = (d2-r2+360)%360;
+
+	
 
 	if(lower1 > upper1) // ex) [330,30]
 	{
@@ -246,3 +258,21 @@ void rescheduler()
 }
 
 */
+
+asmlinkage long sys_rotlock_write(int degree, int range) 
+{
+		printk("sys_rotlock_write(382) called\n");
+			return 0;
+}
+
+asmlinkage long sys_rotunlock_read(int degree, int range) 
+{
+	wake_up_process(temp);
+			return 0;
+}
+
+asmlinkage long sys_rotunlock_write(int degree, int range) 
+{
+		printk("sys_rotunlock_write(385) called\n");
+			return 0;
+}
