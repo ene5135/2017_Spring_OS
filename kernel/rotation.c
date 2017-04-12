@@ -27,12 +27,18 @@ DEFINE_SPINLOCK(global_lock);
 
 asmlinkage long sys_set_rotation(int degree)
 {
-
+	int size = 0;
+	struct proc_lock_info * cursor;
 	spin_lock(&global_lock);
 
 	global_rotation = degree;
 	
-	printk("Current degree is %d (%d)\n", global_rotation, current->pid);
+	list_for_each_entry(cursor, &acquiring_list_head, sibling) 
+	{
+		size++;
+	}
+	
+	printk("Current degree is %d (%d), size of aclist is %d\n", global_rotation, current->pid, size);
 
 	rescheduler();
 
@@ -55,7 +61,7 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 	struct proc_lock_info * new_proc = kmalloc(sizeof(struct proc_lock_info), GFP_KERNEL); // !!나중에 리스트에서없엘때 꼭 프리해줄것
 	new_proc->degree = degree;
 	new_proc->range = range;
-	new_proc->type = READ;
+	new_proc->type = _READ;
 	new_proc->task = current;
 	INIT_LIST_HEAD(&(new_proc->sibling));
 
@@ -63,7 +69,7 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 	
 	if (is_in_range(degree, range, global_rotation)) // 현재 각도를 보고 락 범위안에 포함되는지 판단
 	{
-		if (check_acquiring_list(new_proc) && check_waiting_write()) // 현재 ac_list를 보고 이 프로세스가 lock을 얻을 수 있는지 없는지 판단
+		if (check_acquiring_list(new_proc)) // 현재 ac_list를 보고 이 프로세스가 lock을 얻을 수 있는지 없는지 판단
 		{
 			// Although there is only read locks are acquired, if there is a write process which waits for lock, new process cannot get a lock.
 
@@ -169,6 +175,8 @@ int check_acquiring_list(struct proc_lock_info *new_proc)
 			{
 				if (is_writer(new_proc)) // 겹치는 애가 reader라도 자기가 writer면 lock을 잡을 수 없다.
 					return 0;
+				else if (check_waiting_write()) 
+					return 0;
 			}
 		}
 	}
@@ -194,7 +202,7 @@ int check_waiting_write(void)
 
 int is_writer(struct proc_lock_info * pli)
 {
-	if(pli->type == WRITE)
+	if(pli->type == _WRITE)
 		return 1;
 	else
 		return 0;
@@ -278,7 +286,7 @@ asmlinkage long sys_rotlock_write(int degree, int range)
 
 	new_proc->degree = degree;
 	new_proc->range = range;
-	new_proc->type = WRITE;
+	new_proc->type = _WRITE;
 	new_proc->task = current;
 	INIT_LIST_HEAD(&(new_proc->sibling));
 
@@ -294,9 +302,9 @@ asmlinkage long sys_rotlock_write(int degree, int range)
 
 		list_add_tail(&(new_proc->sibling), &waiting_list_head);
 		should_I_sleep = 1;
+		set_current_state(TASK_INTERRUPTIBLE);
 	}
 
-	set_current_state(TASK_INTERRUPTIBLE);
 
 	spin_unlock(&global_lock);
 

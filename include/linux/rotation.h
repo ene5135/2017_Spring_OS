@@ -1,7 +1,7 @@
 #include<linux/sched.h>
 
-#define WRITE 1
-#define READ 0
+#define _WRITE 1
+#define _READ 0
 
 struct proc_lock_info
 {
