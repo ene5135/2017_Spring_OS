@@ -58,6 +58,7 @@
 #include <asm/unistd.h>
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
+#include <linux/rotation.h>
 
 static void exit_mm(struct task_struct * tsk);
 
@@ -716,7 +717,7 @@ void do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
-
+	exit_rotlock();
 	profile_task_exit(tsk);
 
 	WARN_ON(blk_needs_flush_plug(tsk));
