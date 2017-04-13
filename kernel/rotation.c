@@ -41,6 +41,8 @@ asmlinkage long sys_set_rotation(int degree)
 	
 	global_rotation = degree;
 	
+	printk("current rotation = %d\n",global_rotation);
+
 	rescheduler();
 
 	spin_unlock(&global_lock);
@@ -377,10 +379,7 @@ void exit_rotlock(void){
 		{
 			list_del(&(cursor->sibling));
 			kfree(cursor);
-			rescheduler();
-			spin_unlock(&global_lock);
-			return;
-		}
+		}	
 	}
 
 	list_for_each_entry_safe(cursor, temp, &waiting_list_head, sibling)
@@ -389,12 +388,9 @@ void exit_rotlock(void){
 		{
 			list_del(&(cursor->sibling));
 			kfree(cursor);
-			rescheduler();	
-			spin_unlock(&global_lock);
-			return;
 		}
 	}
-
+	rescheduler();	
 	spin_unlock(&global_lock);
 	return;
 }
