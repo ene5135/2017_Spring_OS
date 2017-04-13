@@ -6,20 +6,21 @@ void print_factor(int n);
 
 int main(int argc, char* argv[]) 
 {
-	if (argc != 2) {
-		printf("Give me ID please\n");
+	if (argc < 4) {
+		printf("Give me ID, Degree, Range\n");
 		return 0;
 	}
 
 	int id = atoi(argv[1]);
-	//int degree = atoi(argv[2]);
-	//int range = atoi(argv[3]);
+	int degree = atoi(argv[2]);
+	int range = atoi(argv[3]);
 	int n;
+	int res=0;
 	char str[20];
 	FILE *fp;
 
 	while (1) {
-		syscall(381, 90, 90); // call sys_rotlock_read(90, 90)
+		syscall(381, degree, range); // call sys_rotlock_read(90, 90)
 
 		fp = fopen("integer", "r");
 		fread(str, sizeof(str), 1, fp);
@@ -28,7 +29,7 @@ int main(int argc, char* argv[])
 		print_factor(n);
 		fclose(fp);
 
-		syscall(383, 90, 90); // call sys_rotunlock_read(90, 90);
+		syscall(383, degree, range); // call sys_rotunlock_read(90, 90);
 	}
 	
 	return 0;

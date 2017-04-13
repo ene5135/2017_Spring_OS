@@ -7,6 +7,7 @@
 #include<linux/sched.h>
 #include<asm-generic/current.h>
 #include<linux/wait.h>
+#include<uapi/asm-generic/errno-base.h>
 
 /*
  * set_rotation() simply copy the degree from user space to kernel space.
@@ -27,25 +28,24 @@ DEFINE_SPINLOCK(global_lock);
 
 asmlinkage long sys_set_rotation(int degree)
 {
-	int size = 0;
+	long acquiring_list_size = 0;
 	struct proc_lock_info * cursor;
-	spin_lock(&global_lock);
+	
+	if(degree < 0 || degree >= 360)
+		return -EINVAL;
 
-	global_rotation = degree;
+	spin_lock(&global_lock);
 	
 	list_for_each_entry(cursor, &acquiring_list_head, sibling) 
-	{
-		size++;
-	}
+		acquiring_list_size++;
 	
-	printk("Current degree is %d (%d), size of aclist is %d\n", global_rotation, current->pid, size);
-
+	global_rotation = degree;
+	
 	rescheduler();
 
 	spin_unlock(&global_lock);
 	
-	return 0;
-	// !!should modify return value
+	return acquiring_list_size;
 }
 
 
@@ -56,9 +56,13 @@ asmlinkage long sys_set_rotation(int degree)
  */
 asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0 < range < 180 */
 {	
-	// printk("sys_rotlock_read called comm:%s pid:%d\n", current->comm, current->pid);
+	
 	int should_I_sleep = 0;
-	struct proc_lock_info * new_proc = kmalloc(sizeof(struct proc_lock_info), GFP_KERNEL); // !!나중에 리스트에서없엘때 꼭 프리해줄것
+	struct proc_lock_info * new_proc = kmalloc(sizeof(struct proc_lock_info), GFP_KERNEL); // this will be freed in unlock.
+
+	if(degree < 0 || degree >= 360 || range <= 0 || range >= 180)
+		return -EINVAL;
+	
 	new_proc->degree = degree;
 	new_proc->range = range;
 	new_proc->type = _READ;
@@ -109,19 +113,29 @@ asmlinkage long sys_rotlock_read(int degree, int range)	/* 0 <= degree < 360 , 0
 
 asmlinkage long sys_rotunlock_read(int degree, int range) 
 {
+
 	struct proc_lock_info * cursor;
 	struct proc_lock_info * temp;
+	int delete_count =0;
+
+	if(degree < 0 || degree >= 360 || range <= 0 || range >= 180)
+		return -EINVAL;
 
 	spin_lock(&global_lock);
 	
 	list_for_each_entry_safe(cursor,temp, &acquiring_list_head, sibling) // ac 리스트를 돌면서 현 프로세스의 proc_lock_info를 찾고 지운다.
 	{
-		if(cursor->task == current)
-		{
+		if (cursor->task == current && cursor->degree == degree && cursor->range == range && cursor->type == _READ) {
 			list_del(&(cursor->sibling));
 			kfree(cursor);
+			delete_count = 1;
 			break;
 		}
+	}
+	if(delete_count == 0)
+	{
+		spin_unlock(&global_lock);
+		return -1; // error occur (there are no lock to be removed)
 	}
 
 	rescheduler();
@@ -135,7 +149,7 @@ void rescheduler(void)
 {
 	struct proc_lock_info * cursor;
 	struct proc_lock_info * temp;
-
+	
 	list_for_each_entry_safe(cursor, temp, &waiting_list_head, sibling)//waiting중인 애들중에 락을 잡을 수 있게 된 애가 있는지 보고 락을 잡게 만들어준다.
 	{
 		if (is_in_range(cursor->degree, cursor->range, global_rotation)) // 현재 각도를 보고 락 범위안에 포함되는지 판단
@@ -284,6 +298,9 @@ asmlinkage long sys_rotlock_write(int degree, int range)
 	int should_I_sleep = 0;
 	struct proc_lock_info * new_proc = kmalloc(sizeof(struct proc_lock_info), GFP_KERNEL); // FREE IT LATER!!
 
+	if(degree < 0 || degree >= 360 || range <= 0 || range >= 180)
+		return -EINVAL;
+
 	new_proc->degree = degree;
 	new_proc->range = range;
 	new_proc->type = _WRITE;
@@ -318,19 +335,28 @@ asmlinkage long sys_rotlock_write(int degree, int range)
 asmlinkage long sys_rotunlock_write(int degree, int range) 
 {
 	struct proc_lock_info * cursor;
+	int delete_count = 0;
+	
+	if(degree < 0 || degree >= 360 || range <= 0 || range >= 180)
+		return -EINVAL;
 
 	spin_lock(&global_lock);
 	
 	list_for_each_entry(cursor, &acquiring_list_head, sibling)
 	{
-		if (cursor->task == current) {
+		if (cursor->task == current && cursor->degree == degree && cursor->range == range && cursor->type == _WRITE) {
 
 			list_del(&(cursor->sibling));
 			kfree(cursor);
+			delete_count = 1;
 			break;
 		}
 	}
-
+	if(delete_count == 0)
+	{
+		spin_unlock(&global_lock);
+		return -1; // error occur (there are no lock to be removed)
+	}
 	rescheduler();
 
 	spin_unlock(&global_lock);
