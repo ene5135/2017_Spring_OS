@@ -92,7 +92,7 @@ LIST_HEAD(acquiring_list_head);
    
 So we decided to implement a common function to cover various waking up cases. The function is called when a lock is released, the device rotation is changed or certain process which was grabbing the lock is terminated, as we mentioned right before. Then, the function actually wakes up the process which is chosen by our lock acquiring policy. We named the function `rescheduler()`.
    
-   ### 4-1. `rescheduler()` implementation
+   ### 4-1. `rescheduler()` implementation.
      `rescheduler()` iterates the waiting process' list. And if certain waiting process is confirmed that it's okay to get the lock, then `rescheduler()` deletes process lock information from the list and calls `wake_up_process()`. Brief description is below.
      
      ```c
@@ -187,11 +187,85 @@ So we decided to implement a common function to cover various waking up cases. T
 		...
 	}
 	```
-	
-	
-     
    
  ## 5. Lock acquiring policy
+   There are five basic rules of lock acquiring policy.
+   
+     1. Read lock can be grabbed by multiple processes.
+     2. Write lock can only be grabbed by a single process.
+     3. Read lock and write lock cannot be grabbed simultaneously.
+     4. If read lock is acquired and write lock is waiting, no more read lock can be acquired(Write lock starvation prevention).
+     5. rules 1~4 all are applied for only locks which cover the current rotation in their range.
+
+rules 1~4 are represented by function `check_acquiring_list()`. And rule 5 is represented by function `is_overwrapped()` and `is_in_range()`. In `rotlock_read()` and `rotlock_write()`, both system calls call `is_in_range()` to check if the current rotation of device is in the caller process' range argument. And then, `check_acquiring_list()` looks for lock acquired process list to follow the rules 1~4. `check_waiting_write()` represents rule 4. It returns if there is write lock waiting or not. Brief logistic flow of `check_acquiring_list()` is below.
+
+```c
+int check_acquiring_list(struct proc_lock_info * new_proc)
+{
+	...
+	/* checks for processes which are acquiring lock */
+	list_for_each_entry(cursor, &acquiring_list_head, sibling)
+	{
+		/* checks for the cursor process' lock covers the current rotation(rule 5) */
+		if (is_overwrapped(cursor->degree, cursor->range, new_proc->degree, new_proc->range)
+		{
+			/* if cursor process lock is write lock, new_proc cannot acquire the lock(rule 2,3) */
+			if (is_writer(cursor)) return 0;
+			/* else if cursor process lock is read lock, */
+			else {
+				/* if new_proc wants write lock, the lock cannot be acquired(rule 3)
+				if (is_writer(new_proc))
+					return 0;
+				/* else, when read lock is acquired and new_proc wants read lock, we need to check if there is a process which waits for write lock(rule 4) */
+				else if (check_waiting_write())
+					return 0;
+			}
+		}
+	}
+	/* if there is no overwrapped locks or only read locks are acquired and no writing lock waiting, lock can be grabbed */
+	return 1;
+}
+```
+
+
+`check_acquiring_list()` is called not only in read/write lock functions but also `rescheduler()` to decide which waiting process can be woken up in certain situation.
+
+```c
+ asmlinkage long sys_rotlock_read(int degree, int range)
+ {
+ 	...
+	if (is_in_range(degree, range, global_rotation) && check_acquiring_list(new_proc))
+	{
+		/* can acquire the lock */
+		...
+	}
+	else 
+	{
+		/* cannot acquire the lock. the process should wait. */
+		...
+	}
+	...
+}
+```
+
+```c
+void rescheduler(void)
+{
+	...
+	list_for_each_entry_safe(cursor, remp, &waiting_list_head, sibling)
+	{
+		if (is_in_range(cursor) && check_acquiring_list(cursor))
+		{
+			/* The process can get the lock. Wake it up! */
+			...
+		}
+	}
+	...
+}
+```
+			
+   
+   
  
  ## 6. Error handling
  
