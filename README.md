@@ -192,13 +192,13 @@ And, we should call `exit_rotlock()` when every termination of every process. So
    
 ## 5. Lock acquiring policy
 There are five basic rules of lock acquiring policy.
-   
+
+   0. rules 1-4 all are applied for only locks which cover the current rotation in their range.
    1. Read lock can be grabbed by multiple processes.
    2. Write lock can only be grabbed by a single process.
    3. Read lock and write lock cannot be grabbed simultaneously.
-   4. If read lock is acquired and write lock is waiting, no more read lock can be acquired(Write lock starvation prevention).
-   5. rules 1-4 all are applied for only locks which cover the current rotation in their range.
-   
+   4. If read lock is acquired and write lock is waiting, no more read lock can be acquired
+   	(Write lock starvation prevention).  
 
 rules 1-4 are represented by function `check_acquiring_list()`. And rule 5 is represented by function `is_overwrapped()` and `is_in_range()`. In `rotlock_read()` and `rotlock_write()`, both system calls call `is_in_range()` to check if the current rotation of device is in the caller process' range argument. And then, `check_acquiring_list()` looks for lock acquired process list to follow the rules 1~4. `check_waiting_write()` represents rule 4. It returns if there is write lock waiting or not. Brief logistic flow of `check_acquiring_list()` is below.
 
