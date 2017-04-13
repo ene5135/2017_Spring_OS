@@ -58,7 +58,7 @@ LIST_HEAD(acquiring_list_head);
 ```
 
  ## 3. Make sleep
-  If `sys_rotlock_read()` or `sys_rotlock_write()` noticed that the caller process cannot acquire the lock yet, the caller process should sleep. To make certain process sleep, there are some steps to be done. First, the process' state should be set to interruptible. Second, the function `schedule()` should be called to let the scheduler notice the caller process' state is changed, and so the process should take a sleep. Then the scheduler will make the process sleep. Brief description of the steps is below.
+  If `sys_rotlock_read()` or `sys_rotlock_write()` noticed that the caller process cannot acquire the lock yet, the caller process should sleep. To make certain process sleep, there are some steps to be done. First, the process' state should be set to interruptible. Second, the function `schedule()` should be called to let the scheduler notice the caller process' state is changed, and so the process should take a sleep. Then the scheduler will make the process sleep. Brief description of the steps is below.
   
   ```c
   asmlinkage long sys_rotlock_read(int degree, int range)
@@ -83,8 +83,114 @@ LIST_HEAD(acquiring_list_head);
   ```
   `global_lock` should be grabbed because the list of acquired/waiting processes will be modified. `global_lock` should not be released before the process state is updated to interruptible. And also, `global_lock` should be released before `schedule()`is called. Otherwise, the caller process will grab the `global_lock` and fall in sleep, which will cause the deadlock.
   
-## 4. Waking up
- 
+ ## 4. Waking up
+   Waking up is pretty more complicated compare to make sleep. While make sleep happens in `sys_rotlock_read()` and `sys_rotlock_write()` directly, waking up can happen in various conditions. We classified the conditions in three cases. 
+
+   1. When certain acquired lock is unlocked. 
+   2. When the device's rotation values is changed by `set_rotation()`. 
+   3. When the process, which was grabbing a lock, is suddenly terminated.
+   
+So we decided to implement a common function to cover various waking up cases. The function is called when a lock is released, the device rotation is changed or certain process which was grabbing the lock is terminated, as we mentioned right before. Then, the function actually wakes up the process which is chosen by our lock acquiring policy. We named the function `rescheduler()`.
+   
+   ### 4-1. `rescheduler()` implementation
+     `rescheduler()` iterates the waiting process' list. And if certain waiting process is confirmed that it's okay to get the lock, then `rescheduler()` deletes process lock information from the list and calls `wake_up_process()`. Brief description is below.
+     
+     ```c
+     void rescheduler(void)
+     {
+     	...
+	
+     	list_for_each_entry_safe(cursor, temp, &waiting_list_head, sibling)
+	{
+		if (condition)
+		{
+			...
+			wake_up_process(cursor->task);
+			...
+		}
+		...
+	}
+	...
+	```
+    ### 4-2. Where `rescheduler()` is called
+      We will show you brief descriptions that where `rescheduler()` is called. 
+      First case is in `set_rotation()`.
+      
+      ```c
+      asmlinkage long sys_set_rotation(int degree)
+      {
+      	...
+	spin_lock(&global_lock);
+	...
+	/* modify the global rotation value */
+	...
+	
+	rescheduler();
+	
+	spin_unlock(&global_lock);
+	...
+       }
+	```
+      
+      Second case is in `rotunlock_read()` and `rotunlock_write()`.
+      
+      ```c
+      asmlinkage long sys_rotunlock_read(int degree, int range)
+      {
+      	...
+	spin_lock(&global_lock);
+	
+	list_for_each_entry_safe(cursor, temp, &acquiring_list_head, sibling)
+	{
+		...
+		/* delete and free the process info entry */
+		...
+	}
+	
+	rescheduler();
+	
+	spin_unlock(&global_lock);
+	...
+      }
+	```
+	Third case is when the lock acquired process is terminated. We implemented `exit_rotlock()` which updates the process lock information list and calls the `rescheduler()`.
+	
+	```c
+	void exit_rotlock(void)
+	{
+		...
+		spin_lock(&global_lock);
+		
+		list_for_each_entry_safe(cursor, temp, &acquiring_list_head, sibling)
+		{
+			if (condition)
+			{
+				...
+				rescheduler();
+				spin_unlock(&global_lock);
+				return;
+			}
+		}
+		...
+		/* repeat same instructions for &waiting_list_head */
+		...
+	}
+	```
+	And, we should call `exit_rotlock()` when every termination of every process. So we decided to put `exit_rotlock();` in `do_exit()` in `kernel/exit.c`.
+	
+	```c
+	/* do_exit() - the system call which always called at every terminations of processses */
+	void do_exit(long code)
+	{
+		...
+		exit_rotlock();
+		...
+	}
+	```
+	
+	
+     
+   
  ## 5. Lock acquiring policy
  
  ## 6. Error handling
