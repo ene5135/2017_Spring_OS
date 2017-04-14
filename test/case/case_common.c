@@ -30,11 +30,11 @@ int main(int argc, char* argv[])
 	}
 
 	syscall(lock, degree, range); 
-	printf("Proc[%d] acquire lock : %c, %d, %d\n",proc_ID,lock_type,degree,range);
+	printf("################# Proc[%d] acquire lock : %c, %d, %d\n",proc_ID,lock_type,degree,range);
 
 	sleep(sleep_time);
 
-	printf("Proc[%d] release lock : %c, %d, %d\n",proc_ID,lock_type,degree,range);
+	printf("################# Proc[%d] release lock : %c, %d, %d\n",proc_ID,lock_type,degree,range);
 	syscall(unlock, degree, range);	
 	
 	return 0;
