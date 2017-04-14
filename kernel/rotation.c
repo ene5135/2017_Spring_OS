@@ -269,7 +269,7 @@ int is_overwrapped(int d1, int r1, int d2, int r2)
 int is_in_range(int degree, int range, int rotation)
 {
 	int upper = (degree+range)%360; 
-	int lower = (degree-range)%360;
+	int lower = (degree-range+360)%360;
 
 	if(upper < lower)
 	{
