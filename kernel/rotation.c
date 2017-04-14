@@ -41,7 +41,7 @@ asmlinkage long sys_set_rotation(int degree)
 	
 	global_rotation = degree;
 	
-	printk("current rotation = %d\n",global_rotation);
+	//printk("current rotation = %d\n",global_rotation);
 
 	rescheduler();
 
