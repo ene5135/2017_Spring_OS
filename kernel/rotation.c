@@ -179,7 +179,7 @@ void rescheduler(void)
 int check_acquiring_list(struct proc_lock_info *new_proc)
 {
 	struct proc_lock_info * cursor;
-
+	struct proc_lock_info * wait_cursor;
 		
 	list_for_each_entry(cursor, &acquiring_list_head, sibling) // 리스트를 돌면서
 	{
@@ -197,12 +197,12 @@ int check_acquiring_list(struct proc_lock_info *new_proc)
 		}
 		else
 		{
-             		list_for_each_entry(wait_cursor, &waiting_list_head, sibling)
-             		{
-                		if(is_overwrapped(cursor->degree, cursor->range, wait_cursor->degree, wait_cursor->range)&&is_in_range(wait_cursor->degree, wait_cursor->range, global_rotation) && (!is_writer(cursor) && is_writer(wait_cursor)&&!is_writer(new_proc)))
-                     			return 0;
-             		}
-         	}
+			list_for_each_entry(wait_cursor, &waiting_list_head, sibling)
+			{
+				if(is_overwrapped(cursor->degree, cursor->range, wait_cursor->degree, wait_cursor->range)&&is_in_range(wait_cursor->degree, wait_cursor->range, global_rotation) && (!is_writer(cursor) && is_writer(wait_cursor)&&!is_writer(new_proc)))
+					return 0;
+			}
+		}
 
 	}
 	return 1; // 겹치는 애가 하나도 없거나 reader끼리만 겹칠경우는 lock을 잡을 수 있다.
