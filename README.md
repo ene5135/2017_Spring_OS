@@ -4,6 +4,7 @@
 
 # Introduction
 This assignment includes five system calls in `kernel/rotation.c`. `set_rotation()` set current rotation of the artik device and maintain the rotation data by a global variable `global_rotation`. `rotlock_read()` and `rotlock_write()` decides the caller to sleep or not, according to rotation status, list of acquired processes and waiting processes. And also the system call make the caller process to sleep if it's required. `rotunlock_read()` and `rotunlock_write()` removes the lock acquired information from the list.
+(In our project, we granted system call number 385 to `rotunlock_read()`, to avoid unidentified error occurrence in ARTIK device. It seems like the error is related to system call number 384)
  
 # Implementation
 ## 1. Device's rotation data
@@ -200,7 +201,7 @@ There are five basic rules of lock acquiring policy.
    4. If read lock is acquired and write lock is waiting, no more read lock can be acquired
    	(Write lock starvation prevention).  
 
-rules 1-4 are represented by function `check_acquiring_list()`. And rule 5 is represented by function `is_overwrapped()` and `is_in_range()`. In `rotlock_read()` and `rotlock_write()`, both system calls call `is_in_range()` to check if the current rotation of device is in the caller process' range argument. And then, `check_acquiring_list()` looks for lock acquired process list to follow the rules 1~4. `check_waiting_write()` represents rule 4. It returns if there is write lock waiting or not. Brief logistic flow of `check_acquiring_list()` is below.
+rules 1-4 are represented by function `check_acquiring_list()`. And rule 0 is represented by function `is_overwrapped()` and `is_in_range()`. In `rotlock_read()` and `rotlock_write()`, both system calls call `is_in_range()` to check if the current rotation of device is in the caller process' range argument. And then, `check_acquiring_list()` looks for lock acquired process list to follow the rules 1~4. `check_waiting_write()` represents rule 4. It returns if there is write lock waiting or not. Brief logistic flow of `check_acquiring_list()` is below.
 
 ```c
 int check_acquiring_list(struct proc_lock_info * new_proc)
