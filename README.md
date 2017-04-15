@@ -303,7 +303,7 @@ if (delete_count == 0)
 
 # Lessons Learned
   * How to block / unblock certain process.
-  * How to declare and use the global lock to get protection of data structures implemented in system call.
+  * How to declare and use the global lock to get protection of data structures which are implemented in system call.
   * How to make finely grained locks : The importance of lock acquirement policy.
    
 # Thank you.
