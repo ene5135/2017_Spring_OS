@@ -216,7 +216,7 @@ int check_acquiring_list(struct proc_lock_info * new_proc)
 			if (is_writer(cursor)) return 0;
 			/* else if cursor process lock is read lock, */
 			else {
-				/* if new_proc wants write lock, the lock cannot be acquired(rule 3)
+				/* if new_proc wants write lock, the lock cannot be acquired(rule 3) */
 				if (is_writer(new_proc))
 					return 0;
 				/* else, when read lock is acquired and new_proc wants read lock, we need to check if there is a process which waits for write lock(rule 4) */
@@ -271,7 +271,39 @@ void rescheduler(void)
    
  
  ## 6. Exception handling
- 
- # Lessons Learned
- 
- # Thank you.
+ We classified exceptions into two cases, which can cause error.
+ ### 6.1 invalid input
+ In project specification, degree should be in [0, 360), and range should be in (0, 180). So we added if statement in each functions to checkout whether the input arguments satisfy the specification or not. For example, below is exception handling in `sys_set_rotation()` for invalid degree input.
+ ```c
+ ...
+ if(degree < 0 || degree >= 360)
+		return -EINVAL;
+ ...
+```
+ ### 6.2 lock-unlock mismatch
+ While trying to acquire certain lock is available at any time, trying to release the lock should be after acquiring the lock. Of course lock and unlock information should be the same : degree, range, address, etc. So we added if statement in two unlock functions to handle the exception case. For example, handling the case in `sys_rotunlock_read()` is below.
+```c
+...
+list_for_each_entry(cursor, &acquiring_list_head, sibling)
+{
+  if (cursor->task == current && cursor->degree == degree && cursor->range == range && cursor->type == _READ) {
+    list_del(&(cursor->sibling));
+    kfree(cursor);
+    delete_count = 1;        
+    break;
+  }
+}
+if (delete_count == 0)
+{
+  spin_unlock(&global_lock);
+  return -1;
+}
+...
+```
+
+# Lessons Learned
+  * How to block / unblock certain process.
+  * How to declare and use the global lock to get protection of data structures implemented in system call.
+  * How to make finely grained locks : The importance of lock acquirement policy.
+   
+# Thank you.
