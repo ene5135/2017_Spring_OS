@@ -108,6 +108,7 @@ extern struct mutex sched_domains_mutex;
 
 struct cfs_rq;
 struct rt_rq;
+struct wrr_rq;
 
 extern struct list_head task_groups;
 
@@ -358,6 +359,15 @@ struct rt_rq {
 #endif
 };
 
+/* Weighted-Round-Robin classes' related field in a runqueue: 
+	modified by JS
+ */
+struct wrr_rq {
+	unsigned int wrr_nr_running;
+	unsigned long total_weight;
+	struct list_head queue;
+};
+
 #ifdef CONFIG_SMP
 
 /*
@@ -422,6 +432,7 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
+	struct wrr_rq wrr; // modified by JS
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */

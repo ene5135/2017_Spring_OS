@@ -3,10 +3,18 @@
 
 #include "sched.h"
 
+#define TIME_SLICE 10
 
 void (*enqueue_task_wrr) (struct rq *rq, struct task_struct *p, int flags)
 {
+	struct wrr_rq *wrr_rq = &rq->wrr;
+	struct sched_wrr_entity *wrr_se = &p->wrr;
 
+	list_add_tail(&wrr_se->run_list, &wrr_rq->queue);
+	wrr_rq->total_wait += wrr_se->weight;
+
+	if (!task_current(rq, p))
+		wrr_se->movable = 1;
 }
 
 	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
