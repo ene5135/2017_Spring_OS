@@ -358,6 +358,11 @@ struct rt_rq {
 #endif
 };
 
+/////// shinhwi ///////
+struct wrr_rq {
+	struct list_head queue_head;
+	int sum_weight;
+};
 #ifdef CONFIG_SMP
 
 /*
@@ -422,6 +427,8 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
+/////// shinhwi ///////
+	struct wrr_rq wrr;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
