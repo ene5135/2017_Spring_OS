@@ -17,45 +17,76 @@ void (*enqueue_task_wrr) (struct rq *rq, struct task_struct *p, int flags)
 		wrr_se->movable = 1;
 }
 
-	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
-	void (*yield_task) (struct rq *rq);
-	bool (*yield_to_task) (struct rq *rq, struct task_struct *p, bool preempt);
+void (*dequeue_task_wrr) (struct rq *rq, struct task_struct *p, int flags)
+{
+	struct wrr_rq *wrr_rq = &rq->wrr;
+	struct sched_wrr_entity *wrr_se = &p->wrr;
 
-	void (*check_preempt_curr) (struct rq *rq, struct task_struct *p, int flags);
+	list_del_init(&wrr_se->run_list);
 
-	struct task_struct * (*pick_next_task) (struct rq *rq);
-	void (*put_prev_task) (struct rq *rq, struct task_struct *p);
+	wrr_rq->total_wait -= wrr_se->weight;
+}
+
+void (*requeue_task_wrr) (struct rq *rq, struct task_struct *p)
+{
+	struct wrr_rq *wrr_rp = &rq->wrr;
+	struct sched_wrr_entity *wrr_se = &p->wrr;
+
+	list_move_tail(&wrr_se->run_list, &wrr_rq->queue);
+}
+	
+void (*yield_task_wrr) (struct rq *rq)
+{
+	requeue_task_wrr(rq, rq->curr);
+}
+
+
+bool (*yield_to_task) (struct rq *rq, struct task_struct *p, bool preempt)
+{
+	// TODO
+}
+
+void (*check_preempt_curr) (struct rq *rq, struct task_struct *p, int flags)
+{
+	// TODO
+}
+	
+struct task_struct * (*pick_next_task) (struct rq *rq)
+{
+
+
+}
+
+void (*put_prev_task) (struct rq *rq, struct task_struct *p);
 
 #ifdef CONFIG_SMP
-	int  (*select_task_rq)(struct task_struct *p, int sd_flag, int flags);
-	void (*migrate_task_rq)(struct task_struct *p, int next_cpu);
 
-	void (*pre_schedule) (struct rq *this_rq, struct task_struct *task);
-	void (*post_schedule) (struct rq *this_rq);
-	void (*task_waking) (struct task_struct *task);
-	void (*task_woken) (struct rq *this_rq, struct task_struct *task);
+int  (*select_task_rq)(struct task_struct *p, int sd_flag, int flags);
+void (*migrate_task_rq)(struct task_struct *p, int next_cpu);
 
-	void (*set_cpus_allowed)(struct task_struct *p,
-				 const struct cpumask *newmask);
+void (*pre_schedule) (struct rq *this_rq, struct task_struct *task);
+void (*post_schedule) (struct rq *this_rq);
+void (*task_waking) (struct task_struct *task);
+void (*task_woken) (struct rq *this_rq, struct task_struct *task);
 
-	void (*rq_online)(struct rq *rq);
-	void (*rq_offline)(struct rq *rq);
+void (*set_cpus_allowed)(struct task_struct *p,	const struct cpumask *newmask);
+
+void (*rq_online)(struct rq *rq);
+void (*rq_offline)(struct rq *rq);
 #endif
 
-	void (*set_curr_task) (struct rq *rq);
-	void (*task_tick) (struct rq *rq, struct task_struct *p, int queued);
-	void (*task_fork) (struct task_struct *p);
+void (*set_curr_task) (struct rq *rq);
+void (*task_tick) (struct rq *rq, struct task_struct *p, int queued);
+void (*task_fork) (struct task_struct *p);
 
-	void (*switched_from) (struct rq *this_rq, struct task_struct *task);
-	void (*switched_to) (struct rq *this_rq, struct task_struct *task);
-	void (*prio_changed) (struct rq *this_rq, struct task_struct *task,
-			     int oldprio);
+void (*switched_from) (struct rq *this_rq, struct task_struct *task);
+void (*switched_to) (struct rq *this_rq, struct task_struct *task);
+void (*prio_changed) (struct rq *this_rq, struct task_struct *task, int oldprio);
 
-	unsigned int (*get_rr_interval) (struct rq *rq,
-					 struct task_struct *task);
+unsigned int (*get_rr_interval) (struct rq *rq, struct task_struct *task);
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-	void (*task_move_group) (struct task_struct *p, int on_rq);
+void (*task_move_group) (struct task_struct *p, int on_rq);
 #endif
 
 

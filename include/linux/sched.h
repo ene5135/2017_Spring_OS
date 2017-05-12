@@ -1056,14 +1056,10 @@ struct sched_rt_entity {
 
 struct sched_wrr_entity {
 	struct list_head run_list;
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	struct sched_wrr_entity	*parent;
-	/* rq on which this entity is (to be) queued: */
-	struct wrr_rq		*wrr_rq;
-	/* rq "owned" by this entity/group: */
-	struct wrr_rq		*my_q;
-#endif
-
+	unsigned int weight;
+	unsigned int time_slice;
+	unsigned int tick_left;
+	unsigned int movable;
 };
 
 
