@@ -1060,7 +1060,8 @@ struct sched_wrr_entity {
 	unsigned int weight; //default = 10, [1,20]
 	unsigned int time_slice; // base time slice(quantum = 10ms)
 							 // so default time slice = 100ms
-	int on_running;	// running( first of rq) -> 1
+	unsigned int tick_left;  // left # of tick count
+	int movable;	// if(not running && in queue) -> 1
 					// else -> 0
 };
 
