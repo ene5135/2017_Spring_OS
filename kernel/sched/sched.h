@@ -362,9 +362,10 @@ struct rt_rq {
 /* Weighted-Round-Robin classes' related field in a runqueue: 
 	modified by JS
  */
+/////// shinhwi ///////
 struct wrr_rq {
-	unsigned long sum_weight;
 	struct list_head queue_head;
+	unsigned long sum_weight;
 };
 
 #ifdef CONFIG_SMP
@@ -431,7 +432,7 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
-	struct wrr_rq wrr; // modified by JS
+	struct wrr_rq wrr;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
