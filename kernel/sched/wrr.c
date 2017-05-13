@@ -1,13 +1,19 @@
+#include <linux/sched.h>
+#include <linux/slab.h>
+
+#include "sched.h"
+
 /////// shinhwi ///////
 
 /////// check Quantum, weight///////
-#define QUANTUM
-#define DEFUALT_WEIGHT
+#define QUANTUM 10
+#define DEFUALT_WEIGHT 10
 #define MIN_WEIGHT	1
 #define MAX_WEIGHT	20
 #define TICK_FACTOR	1/HZ
 
 // 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
+
 static int valid_weight(unsigned int weight)
 {
 	if (weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
@@ -224,6 +230,12 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p){
 	// I think this method shoud not need.
 }
 
+static void init_wrr_rq(struct wrr_rq *wrr_rq)
+{
+  INIT_LIST_HEAD(&wrr_rq->queue_head);
+  wrr_rq->sum_weight = 0;
+}
+  
 
 static const struct sched_class wrr_sched_class = {
 	.next			= &fair_sched_class,

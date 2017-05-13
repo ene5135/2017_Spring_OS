@@ -1054,14 +1054,13 @@ struct sched_rt_entity {
 #endif
 };
 
-/////// shinhwi ///////
 struct sched_wrr_entity {
 	struct list_head run_list;
-	unsigned int weight; //default = 10, [1,20]
-	unsigned int time_slice; // base time slice(quantum = 10ms)
+	unsigned int weight; /* default = 10, [1,20] */
+	unsigned int time_slice; /* base time slice(quantum = 10ms) */
 							 // so default time slice = 100ms
 	unsigned int tick_left;  // left # of tick count
-	int movable;	// if(not running && in queue) -> 1
+	unsigned int movable;	// if(not running && in queue) -> 1
 					// else -> 0
 };
 
@@ -1092,10 +1091,9 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-/////// shinhwi ///////
-	struct sched_wrr_entity wrr;
+	struct sched_wrr_entity wrr; /* added by JS */
 
-#ifdef CONFIG_CGROUP_SCHED
+ #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
 
