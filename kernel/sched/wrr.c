@@ -8,8 +8,8 @@
 /////// check Quantum, weight///////
 #define QUANTUM 10
 #define DEFUALT_WEIGHT 10
-#define MIN_WEIGHT	1
-#define MAX_WEIGHT	20
+#define	SCHED_WRR_MIN_WEIGHT	1
+#define SCHED_WRR_MAX_WEIGHT	20
 #define TICK_FACTOR	1/HZ
 
 // 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
@@ -25,21 +25,23 @@ static int valid_weight(unsigned int weight)
 // Initialize task_struct p
 static void init_task_wrr(struct task_struct *p){
 	
+	struct sched_wrr_entity *wrr_se;
+	
 	if (p == NULL){
 		return;
 	}
-
-	struct sched_wrr_entity *wrr_se =&(p->wrr);
+	
+	wrr_se = &(p->wrr);
 	// first initializing make weight 0
 	// so it is not valid
 	// but if weight already exist (migration)
-	// I use weigth already existed
-	if(!valid_weight(wrr_se->weight)){
+	// I use weight already existed
+	if (!valid_weight(wrr_se->weight)) {
 		wrr_se->weight = DEFUALT_WEIGHT;
 	}
 
-	wrr_se->time_slice = wrr_se->weigth * QUANTUM;
-	wrr_se->time_left = time_slice / TICK_FACTOR;
+	wrr_se->time_slice = wrr_se->weight * QUANTUM;
+	wrr_se->tick_left = wrr_se->time_slice / TICK_FACTOR;
 	INIT_LIST_HEAD(&wrr_se->run_list);
 }
 
@@ -50,7 +52,7 @@ static struct task_struct *get_task_from_wrr_se(struct sched_wrr_entity *wrr_se)
 static void update_curr_wrr(struct rq *rq){
 	
 	struct task_struct *curr = rq->curr;
-	struct sched_wrr_entity *wrr_se = &(curr->rt);
+	// struct sched_wrr_entity *wrr_se = &(curr->wrr);
 	u64 delta_exec;
 
 	if(curr->sched_class != &wrr_sched_class)
@@ -73,7 +75,6 @@ static void update_curr_wrr(struct rq *rq){
 	// shinhwi think bandwidth is not needed
 	// shinhwi think wrr_rq -> run_time is not needed
 
-
 }
 
 // enqueue_Task
@@ -90,9 +91,9 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags) {
 		return;
 	}
 	// add into tail of wrr_rq
-	list_add_tail( &(wrr_se->run_list), &(target_wrr_rq->queue_head));
+	list_add_tail( &(new_wrr_se->run_list), &(wrr_rq->queue_head));
 	// increase sum_weight
-	target_wrr_rq->sum_weight += wrr_se->weight;
+	wrr_rq->sum_weight += new_wrr_se->weight;
 	// make movable = 1
 	if (!task_current(rq, p) && p->nr_cpus_allowed >1){
 		new_wrr_se->movable = 1;
@@ -123,8 +124,9 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags){
 static void yield_task_wrr(struct rq *rq){
 	
 	struct wrr_rq *target_wrr_rq = &(rq->wrr);
-	struct list_head *curr_wrr_se = &((rq->curr)->wrr);
-	struct list_head *curr_run_list =  &(((rq->curr)->wrr).run_list);
+	struct sched_wrr_entity *curr_wrr_se = &((rq->curr)->wrr);
+	struct list_head *curr_run_list = &(curr_wrr_se->run_list);
+	// struct list_head *curr_run_list = &(((rq->curr).wrr).run_list);
 	
 	// move first to tail
 	list_move_tail(curr_run_list, &(target_wrr_rq->queue_head));
@@ -139,15 +141,19 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq){
 	
 	struct wrr_rq *target_wrr_rq = &(rq->wrr);
 	
+	//  maybe....... next task is first of queue
+	struct list_head *next_run_list;
+	struct sched_wrr_entity *next_wrr_se; 
+	struct task_struct *next_task;
+	
 	//if empty 
-	if(list_empty(&(target_wrr_rq->queue_head))){
+	if (list_empty(&(target_wrr_rq->queue_head))){
 			return NULL;
 	}
-	//  maybe....... next task is first of queue
-	struct list_head *next_run_list = (target_wrr_rq->queue_head).next;
-	struct sched_wrr_entity *next_wrr_se 
-		= container_of(next_run_list, struct sched_wrr_entity, run_list);
-	struct task_struct *next_task = get_task_from_wrr_se(next_wrr_se);
+	
+	next_run_list = (target_wrr_rq->queue_head).next;
+	next_wrr_se = container_of(next_run_list, struct sched_wrr_entity, run_list);
+	next_task = get_task_from_wrr_se(next_wrr_se);
 	
 	(next_task->se).exec_start = rq->clock_task;
 	
@@ -155,7 +161,6 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq){
 	next_wrr_se->movable = 0;
 	
 	return next_task;
-
 }
 
 static void put_prev_task_wrr(struct rq *rq, struct task_struct *p) {
@@ -163,8 +168,8 @@ static void put_prev_task_wrr(struct rq *rq, struct task_struct *p) {
 	struct sched_wrr_entity *p_wrr_se = &(p->wrr);
 	update_curr_wrr(rq);
 
-	if(!list_empty(&(p_wrr_se->run_list)) && p->nr_cpus_allowed > 1){
-		wrr_se->movable = 1;
+	if (!list_empty(&(p_wrr_se->run_list)) && p->nr_cpus_allowed > 1){
+		p_wrr_se->movable = 1;
 	}
 }
 
@@ -189,20 +194,20 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued){
 	if(p->policy != SCHED_WRR){
 		return;
 	}
-	// time_left is not 0
-	if(--wrr_se->time_left){
+	// tick_left is not 0
+	if(--wrr_se->tick_left){
 		return;
 	}
 
-	// time_left is 0
+	// tick_left is 0
 	// we have to reschedule
-	wrr_se -> time_left = wrr_se -> time_slice / TICK_FACTOR;
+	wrr_se -> tick_left = wrr_se -> time_slice / TICK_FACTOR;
 	
 	// task_struct is absolutely completed
-	if(wrr_se->run_list.prev == wrr_entity->run_list.next){
+	if(wrr_se->run_list.prev == wrr_se->run_list.next){
 		set_tsk_need_resched(p);
 	}
-	else{// task_struct is not completed, but time_left is not left
+	else{// task_struct is not completed, but tick_left is not left
 		list_move_tail(&(wrr_se->run_list), &(rq->wrr.queue_head));
 		set_tsk_need_resched(p);
 	}
@@ -230,14 +235,26 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p){
 	// I think this method shoud not need.
 }
 
-static void init_wrr_rq(struct wrr_rq *wrr_rq)
+
+static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags){return 0;}
+static void rq_online_wrr(struct rq *rq){}
+static void rq_offline_wrr(struct rq *rq){}
+static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){}
+static void post_schedule_wrr(struct rq *rq){}
+static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
+static void switched_from_wrr(struct rq *rq, struct task_struct *p){}
+
+
+
+void init_wrr_rq(struct wrr_rq *wrr_rq)
 {
   INIT_LIST_HEAD(&wrr_rq->queue_head);
   wrr_rq->sum_weight = 0;
 }
-  
 
-static const struct sched_class wrr_sched_class = {
+
+
+const struct sched_class wrr_sched_class = {
 	.next			= &fair_sched_class,
 	.enqueue_task	= enqueue_task_wrr,
 	.dequeue_task	= dequeue_task_wrr,

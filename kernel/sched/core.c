@@ -3077,6 +3077,8 @@ asmlinkage void __sched schedule(void)
 {
 	struct task_struct *tsk = current;
 
+	printk(KERN_DEBUG "schedule called. policy : %u\n", current->policy);
+
 	sched_submit_work(tsk);
 	__schedule();
 }
