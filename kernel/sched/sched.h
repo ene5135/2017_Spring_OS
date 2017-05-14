@@ -10,7 +10,16 @@
 #include "cpupri.h"
 #include "cpuacct.h"
 
+
+
 extern __read_mostly int scheduler_running;
+
+extern long sched_getweight(pid_t pid);
+extern long sched_setweight(pid_t pid, int weight);
+extern int valid_weight(unsigned int weight);
+
+extern void init_wrr_hrtimer(void);
+extern void start_wrr_hrtimer(void);
 
 /*
  * Convert user-nice values [ -20 ... 0 ... 19 ]
@@ -129,6 +138,9 @@ struct cfs_bandwidth {
 	u64 throttled_time;
 #endif
 };
+
+
+
 
 /* task group related information */
 struct task_group {
@@ -1400,3 +1412,5 @@ static inline u64 irq_time_read(int cpu)
 }
 #endif /* CONFIG_64BIT */
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
+
+
