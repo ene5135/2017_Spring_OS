@@ -1,6 +1,8 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/ktime.h>
 #include <linux/cpumask.h>
+
 #include "sched.h"
 
 /////// shinhwi ///////
@@ -11,10 +13,45 @@
 #define DEFUALT_WEIGHT 10
 #define	SCHED_WRR_MIN_WEIGHT	1
 #define SCHED_WRR_MAX_WEIGHT	20
-#define TICK_FACTOR 1
+#define TICK_FACTOR	HZ/1000/*1/HZ*/
 
 // 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
-static int valid_weight(unsigned int weight)
+
+
+struct hrtimer wrr_hrtimer;
+
+enum hrtimer_restart test(struct hrtimer *timer)
+{
+	ktime_t period = ns_to_ktime(2000*1000000);
+	printk(KERN_ERR "hello\n");
+
+	hrtimer_forward(timer, timer->base->get_time(), period);
+
+  	return HRTIMER_RESTART;
+}
+
+void init_wrr_hrtimer(void)
+{
+
+	printk(KERN_ERR "hello_init\n");
+	hrtimer_init( &wrr_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL );
+  	wrr_hrtimer.function = test;
+
+}
+
+void start_wrr_hrtimer(void)
+{
+
+	printk(KERN_ERR "hello_start\n");
+	int delay_in_ms = 2000;
+	ktime_t ktime = ns_to_ktime(delay_in_ms*1000000);
+
+  	hrtimer_start( &wrr_hrtimer, ktime, HRTIMER_MODE_REL );
+}
+
+
+// 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
+int valid_weight(unsigned int weight)
 {
 	if (weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
 		return 1;
@@ -41,7 +78,7 @@ static void init_task_wrr(struct task_struct *p){
 	}
 
 	wrr_se->time_slice = wrr_se->weight * QUANTUM;
-	wrr_se->tick_left = wrr_se->time_slice / TICK_FACTOR;
+	wrr_se->tick_left = /*100;*/wrr_se->time_slice * TICK_FACTOR;
 	INIT_LIST_HEAD(&wrr_se->run_list);
 }
 
@@ -184,6 +221,9 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued){
 	struct sched_wrr_entity *wrr_se = &(p->wrr);
 
 	update_curr_wrr(rq);
+	
+	//if(p->pid > 4000)
+	//	printk(KERN_ERR "task_tick_wrr : pid %d, policy %u, tick_left %u HZ %d\n",p->pid,p->policy,wrr_se->tick_left,HZ);
 
 	// p is not wrr_policy 
 	if(p->policy != SCHED_WRR){
@@ -196,7 +236,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued){
 
 	// tick_left is 0
 	// we have to reschedule
-	wrr_se -> tick_left = wrr_se -> time_slice / TICK_FACTOR;
+	wrr_se -> tick_left = /*100;*/wrr_se -> time_slice * TICK_FACTOR;
 	
 	// task_struct is absolutely completed
 	if(wrr_se->run_list.prev == wrr_se->run_list.next){
@@ -221,13 +261,13 @@ static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
 
 static void prio_changed_wrr(struct rq *rq, struct task_struct *p, int oldprio){
 	
-	// We has no notion of priority
-	// so Do not need to implement.
+	// We have no notion of priority
+	// so no need to implement.
 }
 
 static void switched_to_wrr(struct rq *rq, struct task_struct *p){
 	
-	// I think this method shoud not need.
+	// I think we don't need this method.
 }
 
 static void set_cpus_allowed_wrr(struct task_struct *p, const struct cpumask *new_mask){
@@ -308,11 +348,9 @@ static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){
 static void post_schedule_wrr(struct rq *rq){
 }
 static void task_woken_wrr(struct rq *rq, struct task_struct *p){
-
 }
 static void switched_from_wrr(struct rq *rq, struct task_struct *p){
 }
-
 
 
 void init_wrr_rq(struct wrr_rq *wrr_rq)

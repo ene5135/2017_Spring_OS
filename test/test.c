@@ -1,4 +1,0 @@
-int main() {
-	while();
-	return 0;
-}
