@@ -1,14 +1,15 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/ktime.h>
-#include <media/rc-core.h>
+#include <linux/cpumask.h>
 
 #include "sched.h"
 
 /////// shinhwi ///////
 
 /////// check Quantum, weight///////
-#define QUANTUM 10
+// 500 tick
+#define QUANTUM 50
 #define DEFUALT_WEIGHT 10
 #define	SCHED_WRR_MIN_WEIGHT	1
 #define SCHED_WRR_MAX_WEIGHT	20
@@ -49,7 +50,7 @@ void start_wrr_hrtimer(void)
 }
 
 
-
+// 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
 int valid_weight(unsigned int weight)
 {
 	if (weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
@@ -209,11 +210,6 @@ static void put_prev_task_wrr(struct rq *rq, struct task_struct *p) {
 	}
 }
 
-//select_task_rq_wrr
-
-//rq_online_wrr
-
-
 static void set_curr_task_wrr(struct rq *rq){
 	struct task_struct *p = rq->curr;
 
@@ -274,28 +270,87 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p){
 	// I think we don't need this method.
 }
 
+static void set_cpus_allowed_wrr(struct task_struct *p, const struct cpumask *new_mask){
+	struct rq *rq;
+	int weight;
 
-static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags){
-/*	
-	int lowest_cpu = find_lightest_cpu_runqueue();
-	int lowest_cpu_arr = lowest_cpu / (sizeof(unsigned long) * 8);
-	int lowest_cpu_bit = 1 << (lowest_cpu % (sizeof(unsigned long) * 8));
+	weight = cpumask_weight(new_mask);
 
-	if (lowest_cpu_bit & p->cpus_allowed.bits[lowest_cpu_arr])
-		return lowest_cpu;
-	else if (lowest_cpu == -1)
-		return task_cpu(p);
-	else
-		return lowest_cpu;*/
-		return 0;
+	if(( p->nr_cpus_allowed > 1) == (weight > 1))
+		return;
+
+	rq = task_rq(p);
+
+	if(weight <= 1){
+		if(!task_current(rq, p)){
+			movable = 0;
+		}
+	}
+	else {
+		if(!task_current(rq, p)){
+			movable = 1;
+		}
+	}
 }
-static void rq_online_wrr(struct rq *rq){}
-static void rq_offline_wrr(struct rq *rq){}
-static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){}
-static void post_schedule_wrr(struct rq *rq){}
-static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
-static void switched_from_wrr(struct rq *rq, struct task_struct *p){}
+static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags){
+	
+	struct task_struct *curr;
+	struct rq *rq;
+	int cpu, lowest_cpu = -1, lowest_weight = -1;
+	int cpu_arr;
+	unsigned long cpu_bit;
 
+	rcu_read_lock();
+
+	cpu = task_cpu(p);
+
+	if (p->nr_cpus_allowed == 1)
+		goto out;
+	
+	//if ( sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK )
+	//	goto out;
+
+	
+	//find smallest rq of online cpu
+	for_each_online_cpu(cpu) {
+		cpu_arr = cpu / (sizeof(unsigned long) * 8);
+		cpu_bit = 1 << (cpu % (sizeof(unsigned long) * 8));
+
+		if (!(cpu_bit & (p->cpus_allowed.bits[cpu_arr])))
+			continue;
+
+		rq = cpu_rq(cpu);
+
+		if (lowest_weight == -1 || lowest_weight > rq->sum_weight) {
+			lowest_weight = rq->sum_weight;
+			lowest_cpu = cpu;
+		}
+	}
+out:
+	rcu_read_unlock();
+
+	if (lowest_cpu != -1)
+		return lowest_cpu;
+	else 
+		return cpu;
+}
+
+static void rq_online_wrr(struct rq *rq){
+	// called when a cpu goes online.
+	__enable_runtime(rq);
+}
+static void rq_offline_wrr(struct rq *rq){
+	// called when a cpu goes offline.
+	__disable_runtime(rq);
+}
+static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){
+}
+static void post_schedule_wrr(struct rq *rq){
+}
+static void task_woken_wrr(struct rq *rq, struct task_struct *p){
+}
+static void switched_from_wrr(struct rq *rq, struct task_struct *p){
+}
 
 
 void init_wrr_rq(struct wrr_rq *wrr_rq)
@@ -304,7 +359,82 @@ void init_wrr_rq(struct wrr_rq *wrr_rq)
   wrr_rq->sum_weight = 0;
 }
 
+void move_task(int max_cpu, int min_cpu) {
 
+	struct rq *max_rq = cpu_rq(max_cpu);
+	struct rq *min_rq = cpu_rq(min_cpu);
+	struct wrr_rq *max_wrr_rq = max_rq->wrr;
+	struct wrr_rq *min_wrr_rq = min_rq->wrr;
+	int max_sum = max_wrr_rq->sum_weight;
+	int min_sum = min_wrr_rq->sum_weight;
+	
+	struct task_struct *p, *move_p;
+	int max_weight = -1;
+
+	double_rq_lock(max_rq, min_rq);
+	
+	if (max_cpu == min_cpu)
+		return;
+
+	/* choose a task to migrate */
+	plist_for_each_entry(p, max_wrr_rq->queue_head, queue_head) {
+		/* when the task is not movable */
+		if (!(p->wrr).movable)
+			continue;
+		/* when the task is not allowed to run on min_cpu */
+		if (!cpumask_test_cpu(min_cpu, &(p->cpus_allowed))
+			continue;
+		/* when the sum_weight order seems to be changed after the migration */
+		if ((se.weight <= max_weight)
+				|| ((max_sum - se.weight) <= (min_sum + se.weight)))
+			continue;
+
+		max_weight = (p->wrr).weight;
+		move_p = p;
+	}
+
+	/* actually move the task */
+	if (move_p && max_weight > 0) {
+		BUG_ON(task_running(max_rq, p));
+		deactivate_task(highest_rq, p, 0);
+		set_task_cpu(p, min_cpu);
+		activate_task(min_rq, p, 0);
+	}
+
+	double_rq_unlock(max_rq, min_rq);
+}
+
+void load_balance_wrr(void){
+	
+	int cpu, min_cpu, max_cpu; 
+	int	min_weight, max_weight;
+	int curr_weight;
+
+	rcu_read_lock();
+
+	//initializing
+	min_weight = cpu_rq(task_cpu(current)) -> sum_weight;
+	min_cpu = task_cpu(current);
+	max_weight = cpu_rq(task_cpu(current)) -> sum_weight;
+	max_cpu = task_cpu(current);
+	//find smallest rq of online cpu
+	for_each_online_cpu(cpu) {
+
+		curr_weight = cpu_rq(cpu)->sum_weight
+		if(curr_weight > max_weight){
+			max_weight = curr_weight;
+			max_cpu = cpu;
+		}
+		if(curr_weight < min_weight){
+			min_weight = curr_weight;
+			min_cpu = cpu;
+		}
+	}
+	rcu_read_unlock();
+
+	move_task(max_cpu, min_cpu);/
+	
+}
 
 const struct sched_class wrr_sched_class = {
 	.next			= &fair_sched_class,
@@ -319,6 +449,8 @@ const struct sched_class wrr_sched_class = {
 
 #ifdef CONFIG_SMP
 	.select_task_rq	= select_task_rq_wrr,
+	
+	.set_cpus_allowed	= set_cpus_allowed_wrr,
 	.rq_online		= rq_online_wrr,
 	.rq_offline		= rq_offline_wrr,
 	.pre_schedule	= pre_schedule_wrr,
