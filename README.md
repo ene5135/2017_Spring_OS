@@ -80,7 +80,7 @@ We use `find_process_by_pid`, `task_rq_lock`, `check_same_owner` in `sched_setwe
 ## 6. Improve
 We used aging-concept. If the task is getting order, scheduler makes it's weight heavier. (e.g. weight++)(1<= weight <= 20). So old process's weight will keep increase until 20. It'll help old process to be terminated earlier than another young processes, and that will make waiting time of the old task slightly shorter.
 
-We placed all of kernel sources of our improved version on [proj3_improved](tree/proj3_improved) branch.
+We placed all of kernel sources of our improved version on "proj3_improved" branch.
 
 ```c
 static void update_curr_wrr(struct rq *rq){
