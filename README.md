@@ -26,7 +26,7 @@ struct sched_wrr_entity {
 
 
 ## 2. `wrr_rq` definition
-We made definition of `wrr_rq` in `kernel/sched/sched.h`, and added it in `struct rq`.
+We made definition of `wrr_rq` in `kernel/sched/sched.h`, and added it in `rq`.
 
 ```c
 struct wrr_rq {
@@ -51,15 +51,36 @@ To implement new scheduling policy, we have to make sure that all functions of s
 * `set_curr_task_wrr` modify current task's `movable` value by 0, which means it's not movable.
 * `task_tick_wrr` calculates the remain # of `tick_left` and decides the task to reschedule or not.
 * `get_rr_interval` transforms time_slice into initial `tick_left` value.
-	
 
+With these functionalities above, we've made definition of `wrr_sched_class`. We modified `next` to `fair_sched_class`, because fair policy run queue have less priority than wrr run queue.
+
+```c
+const struct sched_class wrr_sched_class = {
+	.next		= &fair_sched_class,
+	.enqueue_task	= enqueue_task_wrr,
+	.dequeue_task	= dequeue_task_wrr,
+	...
+};
+```
 ## 4. Load Balancing
 ### 4-1. hrtimer
+It is struct that we use to call load_balance every 2 seconds.
+in entire system, only one timer(struct hrtimer) count system_time.  
+In core.c, init_wrr_hrtimer is called in sched_init and start_wrr_hrtimer is called in sched_init_smp. so timer start. ktime_t(how long period we want) is made 2 seconds. in every 2 seconds, call-back-function(call_load_balance_wrr) is called. 
 ### 4-2. `load_balance_wrr` implementation
+load_balance_wrr is called by hrtimer every 2 seconds.
+first, We have to find max_rq(source cpu), min_rq(destination cpu).
+and, We have to find heaviest among task_struct that can go to min_cpu(see cpumask, movable...) from max_cpu. and this task doesn't cause the weight imbalance to reverse.
+and move this task
 
 ## 5. get_weight(), set_weight()
+we use find_process_by_pid, task_rq_lock, check_smae_owner in sched_setweight. those function is static in core.c. so we implement sched_setweight, sched_getweight in core.c. and system calls are implemented in sched.c
+sched_getweight is protected by rec_read_lock.
+sched_setweight is protected by task_rq_lock.
 
 # Improve
+We use age-concept. if age is increased, weight++(1<= weight <= 20).
+so long-time process's weight is increased until 20.
 
 # Lessons Learned
 
