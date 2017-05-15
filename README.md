@@ -14,9 +14,8 @@ struct sched_wrr_entity {
 	struct list_head run_list;
 	unsigned int weight; 	 /* default weight = 10, [1,20] */
 	unsigned int time_slice; /* default time slice = 10 * 10ms = 100ms */
-	unsigned int tick_left;  // left # of tick count
-	unsigned int movable;	// if(not running && in queue) -> 1
-					// else -> 0
+	unsigned int tick_left;  /* left # of tick count */
+	unsigned int movable;	 /* if(not running && in queue) 1 else 0 */
 };
 ```
 `run_list` consists of another sched_wrr_entities.
@@ -25,7 +24,6 @@ struct sched_wrr_entity {
 `tick_left` is the value which indicates the left count of cpu tick.
 `movable` indicates that the task is movable to another running queue or not. If the task isn't running and in queue, the value is 1. Else the value is 0.
 
-`sched_wrr_entity`
 
 ## 2. `wrr_rq` definition
 We made definition of `wrr_rq` in `kernel/sched/sched.h`, and added it in `struct rq`.
@@ -40,20 +38,19 @@ struct wrr_rq {
 `sum_weight` is sum of all tasks' weight which are in the queue.
 
 ## 3. `wrr_sched_class` implementation
-### 3-1. enqueue_task_wrr, dequeue_task_wrr, yield_task_wrr
-### 3-2. pick_next_task_wrr
-### 3-3. 
+To implement new scheduling policy, we have to make sure that all functions of struct sched_class are appropriately implemented. There are 20 functions in sched_class, and we implemented 10 of them in our `wrr_sched_class` and left another 10 by skeleton.
 
-	.enqueue_task		= enqueue_task_wrr,
-	.dequeue_task		= dequeue_task_wrr,
-	.yield_task		= yield_task_wrr,
-	.pick_next_task		= pick_next_task_wrr,
-	.put_prev_task		= put_prev_task_wrr,
-	.select_task_rq		= select_task_rq_wrr,
-	.set_cpus_allowed	= set_cpus_allowed_wrr,
-	.set_curr_task		= set_curr_task_wrr,
-	.task_tick		= task_tick_wrr,
-	.get_rr_interval	= get_rr_interval_wrr,
+
+* `enqueue_task_wrr` decides the task should be enqueued or not. And if it should be, then hang the task's sched_wrr_entity at `queue_head`'s tail which is in `wrr_rq`.
+* `dequeue_task_wrr` deletes the task's `sched_wrr_entity` from `wrr_rq`.
+* `yield_task_wrr` moves the first task in queue to the tail.
+* `pick_next_task_wrr` picks the next task in queue which is at the head of the queue.
+* `put_prev_task_wrr` makes the current task pause and modify it's `movable` by 1.
+* `select_task_rq_wrr` selects a cpu which has the lowest sum of weight.
+* `set_cpus_allowed_wrr` returns # of cpus which the task is allowed to move in.
+* `set_curr_task_wrr` modify current task's `movable` value by 0, which means it's not movable.
+* `task_tick_wrr` calculates the remain # of `tick_left` and decides the task to reschedule or not.
+* `get_rr_interval` transforms time_slice into initial `tick_left` value.
 	
 
 ## 4. Load Balancing
