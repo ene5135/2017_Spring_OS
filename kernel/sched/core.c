@@ -2765,6 +2765,14 @@ void scheduler_tick(void)
 	struct rq *rq = cpu_rq(cpu);
 	struct task_struct *curr = rq->curr;
 
+	
+/*	if(curr->pid > 5000)
+	{
+		printk("curr pid : %d, policy : %u",curr->pid,curr->policy);
+
+		if (curr->policy == 6 && curr->sched_class != &wrr_sched_class)
+			printk(KERN_ERR "Jj\n");
+	}*/
 	sched_clock_tick();
 
 	raw_spin_lock(&rq->lock);
@@ -3080,7 +3088,7 @@ asmlinkage void __sched schedule(void)
 {
 	struct task_struct *tsk = current;
 
-	printk(KERN_DEBUG "schedule called. policy : %u, tick_left %u \n", current->policy,current->wrr.tick_left);
+	//printk(KERN_DEBUG "schedule called. policy : %u, tick_left %u \n", current->policy,current->wrr.tick_left);
 
 	sched_submit_work(tsk);
 	__schedule();
@@ -8243,12 +8251,12 @@ long sched_setweight(pid_t pid, int weight)
 		if(!check_same_owner(p)) // if the user is not owner of task
 		{
 			task_rq_unlock(rq,p,&flag);
-			return -EINVAL;
+			return -EACCES;
 		}
 		if(wrr_se->weight < weight) // normal user cannot increase weight
 		{
 			task_rq_unlock(rq,p,&flag); 
-			return -EINVAL;
+			return -EACCES;
 		}
 	}
 	wrr_rq->sum_weight -= wrr_se->weight;	
