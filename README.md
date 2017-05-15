@@ -78,9 +78,30 @@ we use find_process_by_pid, task_rq_lock, check_smae_owner in sched_setweight. t
 sched_getweight is protected by rec_read_lock.
 sched_setweight is protected by task_rq_lock.
 
-# Improve
+## 6. Improve
 We use age-concept. if age is increased, weight++(1<= weight <= 20).
 so long-time process's weight is increased until 20.
+
+static void update_curr_wrr(struct rq *rq){
+	
+	struct task_struct *curr = rq->curr;
+	// struct sched_wrr_entity *wrr_se = &(curr->wrr);
+	u64 delta_exec;
+	u64 real_age;
+	,
+	,
+	,
+	real_age = curr->se.sum_exec_runtime;
+	do_div(real_age , 1000000000);
+
+	if(curr->wrr.age < real_age){ // aged by 1 second
+		curr->wrr.age = real_age;
+		if(curr->wrr.weight < 20){
+			curr->wrr.weight++;
+			rq->wrr.sum_weight++;
+		}
+	}
+}
 
 # Lessons Learned
 
