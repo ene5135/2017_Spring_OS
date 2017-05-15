@@ -102,5 +102,13 @@ static void update_curr_wrr(struct rq *rq){
 ```
 
 # Lessons Learned
+## How scheduling works
+We've already learnt about concepts of scheduling, and methodologies of scheduling : FIFO, SJF, RR, etc. But there was no chance to know how really scheduler works and manages all tasks in the device. By implementing wrr scheduler, we had to look around another kernel schedulers : cfs and rt. By reading the code, we could know some common characteristics of kernel scheduler : using tick concept, priority thingies, group scheduling, and so on. 
+
+## How to implement new scheduler
+We've learnt that `Struct sched_class` is pretty handy modulation. Like many other OOP languages, almost all main functions were modulated by `sched_class` structure. What we had to do was just make skeleton according to the sched_class and fill it one by one. Finally, we modified some parts of `sched.h` and `core.c`. That was all. We could create brand-new scheduler by just staying all night for few days.
+
+## How to improve the scheduler
+After the implementation, we've thought about how to improve the scheduler. There were some methodologies, and what we chose is aging approach. If there is a huge work-loaded task and small tasks are keep coming in to the run queue, the huge task cannot end it's workload in short time. But by valuing their ages and give them little more privilige, we can make sure that even huge task can complete their job in understandable time.
 
 # Thank you.
