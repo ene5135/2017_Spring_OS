@@ -113,6 +113,7 @@ static void update_curr_wrr(struct rq *rq){
 		curr->wrr.age = real_age;
 		if(curr->wrr.weight < 20){
 			curr->wrr.weight++;
+			curr->wrr.time_slice = curr->wrr.weight * QUANTUM;
 			rq->wrr.sum_weight++;
 		}
 	}
