@@ -80,7 +80,7 @@ We use `find_process_by_pid`, `task_rq_lock`, `check_same_owner` in `sched_setwe
 ## 6. Improve
 We used aging-concept. If the task is getting order, scheduler makes it's weight heavier. (e.g. weight++)(1<= weight <= 20). So old process's weight will keep increase until 20. It'll help old process to be terminated earlier than another young processes, and that will make waiting time of the old task slightly shorter.
 
-We placed all of kernel sources of our improved version on "proj3_improved" branch.
+We placed all of kernel sources of our improved version on [proj3_improved](tree/proj3_improved) branch.
 
 ```c
 static void update_curr_wrr(struct rq *rq){
@@ -106,8 +106,8 @@ static void update_curr_wrr(struct rq *rq){
 We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
 
 * 10 busy loop processes are running on background.
-* call `testset` and check for running time by time command.
-* `testset` is a function which get an argument from user(weight) and call both `trial` and `setweight` to make `trial` run in various weights
+* execute `testset` and check for running time by time command.
+* `testset` is a function which get an argument from user(weight) and execute both `trial` and `setweight` to make `trial` run in various weights (using `fork` and `execv`)
 * the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values.
 
 ```
