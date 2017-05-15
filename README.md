@@ -63,34 +63,31 @@ const struct sched_class wrr_sched_class = {
 };
 ```
 ## 4. Load Balancing
-### 4-1. hrtimer
-It is struct that we use to call load_balance every 2 seconds.
-in entire system, only one timer(struct hrtimer) count system_time.  
-In core.c, init_wrr_hrtimer is called in sched_init and start_wrr_hrtimer is called in sched_init_smp. so timer start. ktime_t(how long period we want) is made 2 seconds. in every 2 seconds, call-back-function(call_load_balance_wrr) is called. 
+### 4-1. `hrtimer`
+`hrtimer` is struct that we used to call `load_balance` every 2 seconds.
+In entire system, only one timer(`struct hrtimer`) counts `system_time`.  
+In `core.c`, `init_wrr_hrtimer` is called in `sched_init` and `start_wrr_hrtimer` is called in `sched_init_smp`. So timer starts. `ktime_t`(how long period we want) is made 2 seconds. In every 2 seconds, call-back-function(`call_load_balance_wrr`) is called. 
 ### 4-2. `load_balance_wrr` implementation
-load_balance_wrr is called by hrtimer every 2 seconds.
-first, We have to find max_rq(source cpu), min_rq(destination cpu).
-and, We have to find heaviest among task_struct that can go to min_cpu(see cpumask, movable...) from max_cpu. and this task doesn't cause the weight imbalance to reverse.
-and move this task
+`load_balance_wrr` is called by `hrtimer` every 2 seconds.
+first, We have to find `max_rq`(source cpu), `min_rq`(destination cpu).
+and also we have to find heaviest among `task_struct` which might able to move into `min_cpu`(see cpumask, movable...) from `max_cpu`. And this task shouldn't cause the weight order to be reversed.
 
-## 5. get_weight(), set_weight()
-we use find_process_by_pid, task_rq_lock, check_smae_owner in sched_setweight. those function is static in core.c. so we implement sched_setweight, sched_getweight in core.c. and system calls are implemented in sched.c
-sched_getweight is protected by rec_read_lock.
-sched_setweight is protected by task_rq_lock.
+## 5. `get_weight()`, `set_weight()`
+We use `find_process_by_pid`, `task_rq_lock`, `check_same_owner` in `sched_setweight`. Those function is static in `core.c`. So we implemented `sched_setweight`, `sched_getweight` in `core.c`. and system calls are implemented in `sched.c`
+`sched_getweight` is protected by `rcu_read_lock`.
+`sched_setweight` is protected by `task_rq_lock`.
 
 ## 6. Improve
-We use age-concept. if age is increased, weight++(1<= weight <= 20).
-so long-time process's weight is increased until 20.
+We used aging-concept. If the task is getting order, scheduler makes it's weight heavier. (e.g. weight++)(1<= weight <= 20). So old process's weight will keep increase until 20. It'll help old process to be terminated earlier than another young processes, and that will make waiting time of the old task slightly shorter.
 
+```c
 static void update_curr_wrr(struct rq *rq){
 	
 	struct task_struct *curr = rq->curr;
 	// struct sched_wrr_entity *wrr_se = &(curr->wrr);
 	u64 delta_exec;
 	u64 real_age;
-	,
-	,
-	,
+	...
 	real_age = curr->se.sum_exec_runtime;
 	do_div(real_age , 1000000000);
 
@@ -102,6 +99,7 @@ static void update_curr_wrr(struct rq *rq){
 		}
 	}
 }
+```
 
 # Lessons Learned
 
