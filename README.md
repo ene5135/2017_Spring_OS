@@ -3,7 +3,7 @@
 # Weighted Round-Robin Scheduler
 
 # Introduction
-The objective of this project is to implement new scheduler policy, weighted round-robin. Also we have to adjust it on our ARTIK device's kernel.
+The objective of this project is to implement new scheduler policy, weighted round-robin. Also we have to adjust it on our ARTIK device's kernel. The weighted round-robin scheduler gives weight for every tasks which are following wrr policy. The weight ranges between 1 and 20. The task can hold the cpu for weight * 10ms time. And also in every 2 seconds, load of each cpu have to be rebalanced. The heaviest loaded cpu should give the heaviest task to light weighted cpu. By implementing whold scheduler, we can understand how the kernel scheduler works and how the scheduler can be implemented.
 
 # Implementation
 ## 1. `sched_wrr_entity` definition
@@ -100,6 +100,23 @@ static void update_curr_wrr(struct rq *rq){
 	}
 }
 ```
+# Investigation
+We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
+
+* 10 busy loop processes are running on background.
+* call `testset` and check for running time by time command.
+* `testset` is a function which get an argument from user(weight) and call both `trial` and `setweight` to make `trial` run in various weights
+* the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values.
+
+```
+./inf &
+./inf &
+...
+./inf &
+time ./testset 20
+```
+We've drawn a simple graph by the data. The graph shows us inverse proportion between weight and running time of the task. If you want to know about details, please check [plot.pdf](plot.pdf) file.
+
 
 # Lessons Learned
 ## How scheduling works
