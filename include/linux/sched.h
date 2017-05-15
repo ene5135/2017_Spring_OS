@@ -1062,6 +1062,7 @@ struct sched_wrr_entity {
 	unsigned int tick_left;  // left # of tick count
 	unsigned int movable;	// if(not running && in queue) -> 1
 					// else -> 0
+	unsigned int age;	// to improve sched_wrr
 };
 
 struct rcu_node;

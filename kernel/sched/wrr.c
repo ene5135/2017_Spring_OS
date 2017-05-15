@@ -2,6 +2,7 @@
 #include <linux/slab.h>
 #include <linux/ktime.h>
 #include <linux/cpumask.h>
+#include <asm-generic/div64.h>
 
 #include "sched.h"
 
@@ -87,6 +88,7 @@ static void update_curr_wrr(struct rq *rq){
 	struct task_struct *curr = rq->curr;
 	// struct sched_wrr_entity *wrr_se = &(curr->wrr);
 	u64 delta_exec;
+	u64 real_age;
 
 	if(curr->sched_class != &wrr_sched_class)
 		return;
@@ -104,6 +106,18 @@ static void update_curr_wrr(struct rq *rq){
 	curr->se.exec_start = rq->clock_task;
 	cpuacct_charge(curr, delta_exec);
 	
+	real_age = curr->se.sum_exec_runtime;
+	do_div(real_age , 1000000000);
+
+	if(curr->wrr.age < real_age){ // aged by 1 second
+		curr->wrr.age = real_age;
+		if(curr->wrr.weight < 20){
+			curr->wrr.weight++;
+			rq->wrr.sum_weight++;
+		}
+	}
+	
+	//printk(KERN_ERR "sum_exec_runtime : %llu", curr->se.sum_exec_runtime);
 	// shinhwi think avg_update is not needed
 	// shinhwi think bandwidth is not needed
 	// shinhwi think wrr_rq -> run_time is not needed

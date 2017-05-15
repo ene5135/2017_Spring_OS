@@ -1640,6 +1640,7 @@ static void __sched_fork(struct task_struct *p)
 	INIT_LIST_HEAD(&p->rt.run_list);
 	INIT_LIST_HEAD(&p->wrr.run_list);	/* added by JS */
 	p->wrr.weight = 10;					/* added by JS */
+	p->wrr.age = 0;
 	//printk(KERN_ERR "\n\n\n\n\n__sched_fork : pid %d, tick_left %u\n\n\n\n\n",p->pid,p->wrr.tick_left);
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS

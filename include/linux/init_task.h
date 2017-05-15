@@ -186,6 +186,7 @@ extern struct task_group root_task_group;
 		.time_slice	= 10 * 10,			\
 		.tick_left	= /*200*/HZ/10,		\
 		.movable = 0,				\
+		.age = 0,				\
 	},							\
 	.tasks		= LIST_HEAD_INIT(tsk.tasks),			\
 	INIT_PUSHABLE_TASKS(tsk)					\
