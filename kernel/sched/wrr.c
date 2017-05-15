@@ -5,26 +5,22 @@
 
 #include "sched.h"
 
-/////// shinhwi ///////
-
-/////// check Quantum, weight///////
-// 500 tick
-#define QUANTUM 50
+#define QUANTUM 10
 #define DEFUALT_WEIGHT 10
 #define	SCHED_WRR_MIN_WEIGHT	1
 #define SCHED_WRR_MAX_WEIGHT	20
-#define TICK_FACTOR	HZ/1000/*1/HZ*/
+#define TICK_FACTOR	HZ/1000
 
 // 1(MIN_WEIGHT) <= valid weight <= 20(MAX_WEIGHT)
-
+void load_balance_wrr(void);
 
 struct hrtimer wrr_hrtimer;
 
-enum hrtimer_restart test(struct hrtimer *timer)
+enum hrtimer_restart call_load_balance_wrr(struct hrtimer *timer)
 {
 	ktime_t period = ns_to_ktime(2000*1000000);
-	printk(KERN_ERR "hello\n");
-
+	//printk(KERN_ERR "hello\n");
+	load_balance_wrr();
 	hrtimer_forward(timer, timer->base->get_time(), period);
 
   	return HRTIMER_RESTART;
@@ -33,18 +29,18 @@ enum hrtimer_restart test(struct hrtimer *timer)
 void init_wrr_hrtimer(void)
 {
 
-	printk(KERN_ERR "hello_init\n");
+	//printk(KERN_ERR "hello_init\n");
 	hrtimer_init( &wrr_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL );
-  	wrr_hrtimer.function = test;
+  	wrr_hrtimer.function = call_load_balance_wrr;
 
 }
 
 void start_wrr_hrtimer(void)
 {
 
-	printk(KERN_ERR "hello_start\n");
 	int delay_in_ms = 2000;
 	ktime_t ktime = ns_to_ktime(delay_in_ms*1000000);
+	//printk(KERN_ERR "hello_start\n");
 
   	hrtimer_start( &wrr_hrtimer, ktime, HRTIMER_MODE_REL );
 }
@@ -283,22 +279,21 @@ static void set_cpus_allowed_wrr(struct task_struct *p, const struct cpumask *ne
 
 	if(weight <= 1){
 		if(!task_current(rq, p)){
-			movable = 0;
+			p->wrr.movable = 0;
 		}
 	}
 	else {
 		if(!task_current(rq, p)){
-			movable = 1;
+			p->wrr.movable = 1;
 		}
 	}
 }
 static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags){
 	
-	struct task_struct *curr;
 	struct rq *rq;
 	int cpu, lowest_cpu = -1, lowest_weight = -1;
-	int cpu_arr;
-	unsigned long cpu_bit;
+	//int cpu_arr;
+	//unsigned long cpu_bit;
 
 	rcu_read_lock();
 
@@ -313,16 +308,18 @@ static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags){
 	
 	//find smallest rq of online cpu
 	for_each_online_cpu(cpu) {
-		cpu_arr = cpu / (sizeof(unsigned long) * 8);
+		/*cpu_arr = cpu / (sizeof(unsigned long) * 8);
 		cpu_bit = 1 << (cpu % (sizeof(unsigned long) * 8));
 
 		if (!(cpu_bit & (p->cpus_allowed.bits[cpu_arr])))
 			continue;
-
+		*/
+		if(!cpumask_test_cpu(cpu, &p->cpus_allowed))
+			continue;
 		rq = cpu_rq(cpu);
 
-		if (lowest_weight == -1 || lowest_weight > rq->sum_weight) {
-			lowest_weight = rq->sum_weight;
+		if (lowest_weight == -1 || lowest_weight > rq->wrr.sum_weight) {
+			lowest_weight = rq->wrr.sum_weight;
 			lowest_cpu = cpu;
 		}
 	}
@@ -337,11 +334,9 @@ out:
 
 static void rq_online_wrr(struct rq *rq){
 	// called when a cpu goes online.
-	__enable_runtime(rq);
 }
 static void rq_offline_wrr(struct rq *rq){
 	// called when a cpu goes offline.
-	__disable_runtime(rq);
 }
 static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){
 }
@@ -363,42 +358,50 @@ void move_task(int max_cpu, int min_cpu) {
 
 	struct rq *max_rq = cpu_rq(max_cpu);
 	struct rq *min_rq = cpu_rq(min_cpu);
-	struct wrr_rq *max_wrr_rq = max_rq->wrr;
-	struct wrr_rq *min_wrr_rq = min_rq->wrr;
-	int max_sum = max_wrr_rq->sum_weight;
-	int min_sum = min_wrr_rq->sum_weight;
-	
-	struct task_struct *p, *move_p;
+	struct wrr_rq *max_wrr_rq = &max_rq->wrr;
+	struct wrr_rq *min_wrr_rq = &min_rq->wrr;
+	struct task_struct *move_p, *p;
+	struct list_head *curr;
 	int max_weight = -1;
+	int curr_weight;
+	struct sched_wrr_entity *wrr_se;
 
+	if (max_cpu == min_cpu){
+		return;
+	}
+
+
+	move_p=NULL;
 	double_rq_lock(max_rq, min_rq);
 	
-	if (max_cpu == min_cpu)
-		return;
+	curr = &max_wrr_rq->queue_head;
+	
+	while(curr->next != &(max_wrr_rq->queue_head)){
+		curr = curr->next;
+		wrr_se = container_of(curr,struct sched_wrr_entity, run_list);
+		p = get_task_from_wrr_se(wrr_se);
+		curr_weight = wrr_se -> weight;
 
-	/* choose a task to migrate */
-	plist_for_each_entry(p, max_wrr_rq->queue_head, queue_head) {
-		/* when the task is not movable */
-		if (!(p->wrr).movable)
+		if(wrr_se->movable == 0)
 			continue;
-		/* when the task is not allowed to run on min_cpu */
-		if (!cpumask_test_cpu(min_cpu, &(p->cpus_allowed))
+		if(!cpumask_test_cpu(min_cpu, &p->cpus_allowed))
 			continue;
-		/* when the sum_weight order seems to be changed after the migration */
-		if ((se.weight <= max_weight)
-				|| ((max_sum - se.weight) <= (min_sum + se.weight)))
-			continue;
-
-		max_weight = (p->wrr).weight;
-		move_p = p;
+		if(curr_weight > max_weight)
+		{
+			if(max_wrr_rq->sum_weight - curr_weight > min_wrr_rq->sum_weight + curr_weight)
+			{
+				max_weight = curr_weight;
+				move_p = p;
+			}
+		}		
 	}
 
 	/* actually move the task */
-	if (move_p && max_weight > 0) {
-		BUG_ON(task_running(max_rq, p));
-		deactivate_task(highest_rq, p, 0);
-		set_task_cpu(p, min_cpu);
-		activate_task(min_rq, p, 0);
+	if (move_p) {
+		//printk(KERN_ERR "load_balancing occur!  \n");
+		deactivate_task(max_rq, move_p, 0);
+		set_task_cpu(move_p, min_cpu);
+		activate_task(min_rq, move_p, 0);
 	}
 
 	double_rq_unlock(max_rq, min_rq);
@@ -410,17 +413,20 @@ void load_balance_wrr(void){
 	int	min_weight, max_weight;
 	int curr_weight;
 
+	//printk(KERN_ERR "load_balance! YOufdojwofdopfjwpofdjopajfowp\n");
 	rcu_read_lock();
 
 	//initializing
-	min_weight = cpu_rq(task_cpu(current)) -> sum_weight;
+	min_weight = cpu_rq(task_cpu(current))->wrr.sum_weight;
 	min_cpu = task_cpu(current);
-	max_weight = cpu_rq(task_cpu(current)) -> sum_weight;
+	max_weight = cpu_rq(task_cpu(current))->wrr.sum_weight;
 	max_cpu = task_cpu(current);
 	//find smallest rq of online cpu
+
 	for_each_online_cpu(cpu) {
 
-		curr_weight = cpu_rq(cpu)->sum_weight
+		curr_weight = cpu_rq(cpu)->wrr.sum_weight;
+		//printk(KERN_ERR "cpu : %d  weight : %d\n", cpu, curr_weight);
 		if(curr_weight > max_weight){
 			max_weight = curr_weight;
 			max_cpu = cpu;
@@ -431,8 +437,8 @@ void load_balance_wrr(void){
 		}
 	}
 	rcu_read_unlock();
-
-	move_task(max_cpu, min_cpu);/
+	//printk(KERN_ERR "max_cpu : %d , min_cpu : %d\n", max_cpu, min_cpu);
+	move_task(max_cpu, min_cpu);
 	
 }
 

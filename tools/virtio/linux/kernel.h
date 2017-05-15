@@ -15,7 +15,7 @@
 #include <unistd.h>
 #include <asm/barrier.h>
 
-// #define CONFIG_SMP #cbyAA0
+#define CONFIG_SMP  // AA0
 
 #define PAGE_SIZE getpagesize()
 #define PAGE_MASK (~(PAGE_SIZE-1))
