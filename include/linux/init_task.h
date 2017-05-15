@@ -184,7 +184,7 @@ extern struct task_group root_task_group;
 		.run_list	= LIST_HEAD_INIT(tsk.wrr.run_list),	\
 		.weight		= 10,			\
 		.time_slice	= 10 * 10,			\
-		.tick_left	= HZ / 10,		\
+		.tick_left	= /*200*/HZ/10,		\
 		.movable = 0,				\
 	},							\
 	.tasks		= LIST_HEAD_INIT(tsk.tasks),			\

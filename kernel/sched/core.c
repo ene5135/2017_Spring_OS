@@ -90,6 +90,8 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+#include <media/rc-core.h>
+
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -1638,6 +1640,7 @@ static void __sched_fork(struct task_struct *p)
 	INIT_LIST_HEAD(&p->rt.run_list);
 	INIT_LIST_HEAD(&p->wrr.run_list);	/* added by JS */
 	p->wrr.weight = 10;					/* added by JS */
+	//printk(KERN_ERR "\n\n\n\n\n__sched_fork : pid %d, tick_left %u\n\n\n\n\n",p->pid,p->wrr.tick_left);
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	INIT_HLIST_HEAD(&p->preempt_notifiers);
@@ -3077,7 +3080,7 @@ asmlinkage void __sched schedule(void)
 {
 	struct task_struct *tsk = current;
 
-	printk(KERN_DEBUG "schedule called. policy : %u\n", current->policy);
+	printk(KERN_DEBUG "schedule called. policy : %u, tick_left %u \n", current->policy,current->wrr.tick_left);
 
 	sched_submit_work(tsk);
 	__schedule();
@@ -6902,6 +6905,9 @@ static int cpuset_cpu_inactive(struct notifier_block *nfb, unsigned long action,
 
 void __init sched_init_smp(void)
 {
+//	ktime_t ktime;
+//	unsigned long delay_in_ms = 2000L;
+
 	cpumask_var_t non_isolated_cpus;
 
 	alloc_cpumask_var(&non_isolated_cpus, GFP_KERNEL);
@@ -6926,6 +6932,10 @@ void __init sched_init_smp(void)
 	hotcpu_notifier(update_runtime, 0);
 
 	init_hrtick();
+
+//	ktime = ktime_set(0,MS_TO_NS(delay_in_ms));
+// 	hrtimer_start( &wrr_hrtimer, ktime, HRTIMER_MODE_REL );
+	start_wrr_hrtimer();
 
 	/* Move init over to a non-isolated CPU */
 	if (set_cpus_allowed_ptr(current, non_isolated_cpus) < 0)
@@ -7005,6 +7015,7 @@ void __init sched_init(void)
 
 #ifdef CONFIG_SMP
 	init_defrootdomain();
+
 #endif
 
 	init_rt_bandwidth(&def_rt_bandwidth,
@@ -7138,6 +7149,10 @@ void __init sched_init(void)
 #endif
 	init_sched_fair_class();
 
+#ifdef CONFIG_SMP
+	init_wrr_hrtimer();
+	//start_wrr_hrtimer();
+#endif // geungook
 	scheduler_running = 1;
 }
 
@@ -8170,4 +8185,115 @@ void dump_cpu_task(int cpu)
 {
 	pr_info("Task dump for CPU %d:\n", cpu);
 	sched_show_task(cpu_curr(cpu));
+}
+
+/*
+ * Set the SCHED_WRR weight of process, as identified by 'pid'.
+ * If 'pid' is 0, set the weight for the calling process.
+ * System call number 380.
+ */
+//asmlinkage long sys_sched_setweight(pid_t pid, int weight);
+
+/*
+ * Obtain the SCHED_WRR weight of a process as identified by 'pid'.
+ * If 'pid' is 0, return the weight of the calling process.
+ * System call number 381.
+ */
+//asmlinkage long sys_sched_getweight(pid_t pid);
+
+
+// I don't know what error code should be used,,, I just used -EINVAL in all cases
+long sched_setweight(pid_t pid, int weight)
+{
+	struct rq * rq;
+	struct task_struct * p;
+	struct sched_wrr_entity * wrr_se;
+	unsigned long flag;
+	struct wrr_rq * wrr_rq;
+
+	if(!valid_weight(weight)) // if the input weight is invalid
+		return -EINVAL; 
+	
+	if(pid==0)
+	{
+		p = current;
+	}
+	else
+	{
+		p = find_process_by_pid(pid);
+	}
+
+	if(p == NULL) // if there is no task corresponding with pid
+		return -EINVAL; 
+	
+	rq = task_rq_lock(p,&flag); // get lock	
+	wrr_se = &(p->wrr);
+	wrr_rq = &(rq->wrr);
+
+	if(p->policy != SCHED_WRR) // if the policy of task is not wrr
+	{
+		task_rq_unlock(rq,p,&flag);
+		return -EINVAL; 
+	}
+
+	// user check
+
+	if (current_uid() != 0 && current_euid() != 0) // normal user case
+	{
+		if(!check_same_owner(p)) // if the user is not owner of task
+		{
+			task_rq_unlock(rq,p,&flag);
+			return -EINVAL;
+		}
+		if(wrr_se->weight < weight) // normal user cannot increase weight
+		{
+			task_rq_unlock(rq,p,&flag); 
+			return -EINVAL;
+		}
+	}
+	wrr_rq->sum_weight -= wrr_se->weight;	
+	wrr_se->weight = weight;
+	wrr_rq->sum_weight += weight;
+	
+	wrr_se->time_slice = weight * 10;	
+
+// should I update time_slice and tick_left???? // geungook
+
+	task_rq_unlock(rq,p,&flag);
+
+	return 0;
+}
+
+
+// should I get a lock in the sched_getweight???? // geungook
+long sched_getweight(pid_t pid)
+{
+	struct task_struct * p;
+	struct sched_wrr_entity * wrr_se;
+	rcu_read_lock();
+	
+	if(pid==0)
+	{
+		p = current;
+	}
+	else
+	{
+		p = find_process_by_pid(pid);
+	}
+
+	if(p == NULL) // if there is no task corresponding with pid
+	{
+		rcu_read_unlock();
+		return -EINVAL; 
+	}
+	if(p->policy != SCHED_WRR) // if the policy of task is not wrr
+	{	
+		rcu_read_unlock();
+		return -EINVAL; 
+	}
+
+	wrr_se = &(p->wrr);
+	
+	rcu_read_unlock();
+	return wrr_se -> weight;
 }
