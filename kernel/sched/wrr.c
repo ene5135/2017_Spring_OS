@@ -381,6 +381,7 @@ void move_task(int max_cpu, int min_cpu) {
 		wrr_se = container_of(curr,struct sched_wrr_entity, run_list);
 		p = get_task_from_wrr_se(wrr_se);
 		curr_weight = wrr_se -> weight;
+
 		if(wrr_se->movable == 0)
 			continue;
 		if(!cpumask_test_cpu(min_cpu, &p->cpus_allowed))
@@ -397,6 +398,7 @@ void move_task(int max_cpu, int min_cpu) {
 
 	/* actually move the task */
 	if (move_p) {
+		//printk(KERN_ERR "load_balancing occur!  \n");
 		deactivate_task(max_rq, move_p, 0);
 		set_task_cpu(move_p, min_cpu);
 		activate_task(min_rq, move_p, 0);
@@ -411,6 +413,7 @@ void load_balance_wrr(void){
 	int	min_weight, max_weight;
 	int curr_weight;
 
+	//printk(KERN_ERR "load_balance! YOufdojwofdopfjwpofdjopajfowp\n");
 	rcu_read_lock();
 
 	//initializing
@@ -423,6 +426,7 @@ void load_balance_wrr(void){
 	for_each_online_cpu(cpu) {
 
 		curr_weight = cpu_rq(cpu)->wrr.sum_weight;
+		//printk(KERN_ERR "cpu : %d  weight : %d\n", cpu, curr_weight);
 		if(curr_weight > max_weight){
 			max_weight = curr_weight;
 			max_cpu = cpu;
@@ -433,7 +437,7 @@ void load_balance_wrr(void){
 		}
 	}
 	rcu_read_unlock();
-
+	//printk(KERN_ERR "max_cpu : %d , min_cpu : %d\n", max_cpu, min_cpu);
 	move_task(max_cpu, min_cpu);
 	
 }
