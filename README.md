@@ -97,11 +97,20 @@ static void update_curr_wrr(struct rq *rq){
 		curr->wrr.age = real_age;
 		if(curr->wrr.weight < 20){
 			curr->wrr.weight++;
+			curr->wrr.time_slice = curr->wrr.weight*QUANTUM;
 			rq->wrr.sum_weight++;
 		}
 	}
 }
 ```
+We've done a simple experiment to investigate benefit of aging approach. First, wrr policy without aging, we ran a process(`./trial 200000033`) with weight 1 and 10 other infinite loop processes which are weight 20. We measured how long does it take to done the trial process. The result is below.
+![wrr](wrr.png)
+The result is around 2 to 3 minutes.
+
+We've done same experiment with aging wrr policy. The result is below.
+![wrr_aging](wrr_aging.png)
+The result has dramatically improved, which is around less then 1 minute. As you can see, "aging" wrr policy can reduce the long-time-consuming process's execution time compare to default wrr policy. 
+
 # Investigation
 We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
 
