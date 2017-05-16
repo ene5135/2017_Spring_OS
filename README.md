@@ -106,9 +106,9 @@ static void update_curr_wrr(struct rq *rq){
 We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
 
 * 10 busy loop processes are running on background.
-* execute `testset` and check for running time by time command.
-* `testset` is a function which get an argument from user(weight) and execute both `trial` and `setweight` to make `trial` run in various weights (using `fork` and `execv`)
-* the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values.
+* execute [testset](test/testset.c) and check for running time by time command.
+* `testset` is a program which get an argument from user(weight) and execute both `trial` and `setweight` to make `trial` run in various weights (using `fork` and `execv`)
+* the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values. 
 
 ```
 ./inf &
