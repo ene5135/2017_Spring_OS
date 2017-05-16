@@ -77,7 +77,24 @@ We use `find_process_by_pid`, `task_rq_lock`, `check_same_owner` in `sched_setwe
 `sched_getweight` is protected by `rcu_read_lock`.
 `sched_setweight` is protected by `task_rq_lock`.
 
-## 6. Improve
+# Investigation
+We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
+
+* 10 busy loop processes are running on background.
+* execute [testset](test/testset.c) and check for running time by time command.
+* `testset` is a program which get an argument from user(weight) and execute both `trial` and `setweight` to make `trial` run in various weights (using `fork` and `execv`)
+* the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values. 
+
+```
+./inf &
+./inf &
+...
+./inf &
+time ./testset 20
+```
+We've drawn a simple graph by the data. The graph shows us inverse proportion between weight and running time of the task. If you want to know about details, please check [plot.pdf](plot.pdf) file.
+
+# Improve
 We used aging-concept. If the task is getting order, scheduler makes it's weight heavier. (e.g. weight++)(1<= weight <= 20). So old process's weight will keep increase until 20. It'll help old process to be terminated earlier than another young processes, and that will make waiting time of the old task slightly shorter.
 
 We placed all of kernel sources of our improved version on [proj3_improved](https://github.com/swsnu/os-team7/tree/proj3_improved) branch.
@@ -104,29 +121,17 @@ static void update_curr_wrr(struct rq *rq){
 }
 ```
 We've done a simple experiment to investigate benefit of aging approach. First, wrr policy without aging, we ran a process(`./trial 200000033`) with weight 1 and 10 other infinite loop processes which are weight 20. We measured how long does it take to done the trial process. The result is below.
+
 ![wrr](wrr.png)
+
 The result is around 2 to 3 minutes.
 
 We've done same experiment with aging wrr policy. The result is below.
+
 ![wrr_aging](wrr_aging.png)
+
 The result has dramatically improved, which is around less then 1 minute. As you can see, "aging" wrr policy can reduce the long-time-consuming process's execution time compare to default wrr policy. 
 
-# Investigation
-We've tested our scheduler's functionality for various task weight(1~20). Testing environment is below.
-
-* 10 busy loop processes are running on background.
-* execute [testset](test/testset.c) and check for running time by time command.
-* `testset` is a program which get an argument from user(weight) and execute both `trial` and `setweight` to make `trial` run in various weights (using `fork` and `execv`)
-* the output time is not stable, so we've tried every 20 kinds of weight cases(1~20) for three times and get average from that three values. 
-
-```
-./inf &
-./inf &
-...
-./inf &
-time ./testset 20
-```
-We've drawn a simple graph by the data. The graph shows us inverse proportion between weight and running time of the task. If you want to know about details, please check [plot.pdf](plot.pdf) file.
 
 
 # Lessons Learned
