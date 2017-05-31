@@ -39,6 +39,10 @@ const struct inode_operations ext2_symlink_inode_operations = {
 	.listxattr	= ext2_listxattr,
 	.removexattr	= generic_removexattr,
 #endif
+	// atleasta0
+	.set_gps_location	= ext2_set_gps_location,
+	.get_gps_location	= ext2_get_gps_loaction,
+
 };
  
 const struct inode_operations ext2_fast_symlink_inode_operations = {
@@ -51,4 +55,8 @@ const struct inode_operations ext2_fast_symlink_inode_operations = {
 	.listxattr	= ext2_listxattr,
 	.removexattr	= generic_removexattr,
 #endif
+	// atleasta0
+	.set_gps_location	= ext2_set_gps_location,
+	.get_gps_location	= ext2_get_gps_loaction,
+
 };
