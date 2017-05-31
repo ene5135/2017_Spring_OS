@@ -1,3 +1,5 @@
+// atleasta0
+
 DEFINE_SPINLOCK(gps_lock);
 
 struct gps_location {

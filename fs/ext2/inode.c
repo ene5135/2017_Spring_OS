@@ -1376,6 +1376,7 @@ struct inode *ext2_iget (struct super_block *sb, unsigned long ino)
 	ei->i_dir_start_lookup = 0;
 
 /*	gps_location field	*/
+// atleasta0
 
 	ei->i_lat_integer = le32_to_cpu(raw_inode->i_lat_integer);		
 	ei->i_lat_fractional = le32_to_cpu(raw_inode->i_lat_fractional);
@@ -1495,7 +1496,9 @@ static int __ext2_write_inode(struct inode *inode, int do_sync)
 	raw_inode->i_faddr = cpu_to_le32(ei->i_faddr);
 
 /*	gps field	*/
-	
+
+// atleasta0
+
 	raw_inode->i_lat_integer = cpu_to_le32(ei->i_lat_integer);
 	raw_inode->i_lat_fractional = cpu_to_le32(ei->i_lat_fractional);
 	raw_inode->i_lng_integer = cpu_to_le32(ei->i_lng_integer);
@@ -1591,6 +1594,8 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 
 	return error;
 }
+
+// atleasta0
 
 int ext2_set_gps_location(struct inode * inode)
 {

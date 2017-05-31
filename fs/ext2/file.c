@@ -104,6 +104,7 @@ const struct inode_operations ext2_file_inode_operations = {
 	.setattr	= ext2_setattr,
 	.get_acl	= ext2_get_acl,
 	.fiemap		= ext2_fiemap,
+	// atleasta0
 	.set_gps_location	= ext2_set_gps_location,
 	.get_gps_location	= ext2_get_gps_loaction,
 };
