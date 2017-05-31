@@ -1564,6 +1564,7 @@ struct inode_operations {
 	int (*atomic_open)(struct inode *, struct dentry *,
 			   struct file *, unsigned open_flag,
 			   umode_t create_mode, int *opened);
+// atleasta0
 	int (*set_gps_location)(struct inode *);
 	int (*get_gps_location)(struct inode *, struct gps_location *);
 } ____cacheline_aligned;
