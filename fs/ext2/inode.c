@@ -1601,7 +1601,8 @@ int ext2_set_gps_location(struct inode * inode)
 {
 	struct ext2_inode_info *ext2_info = EXT2_I(inode);
 
-	spin_lock(&gps_lock);
+	read_lock(&gps_lock); // lock for global gps
+	write_lock(&i_gps_lock); // lock for inode gps
 
 	ext2_info->i_lat_integer = curr_gps_location.lat_integer;
 	ext2_info->i_lat_fractional = curr_gps_location.lat_fractional;
@@ -1609,7 +1610,8 @@ int ext2_set_gps_location(struct inode * inode)
 	ext2_info->i_lng_fractional = curr_gps_location.lng_fractional;
 	ext2_info->i_accuracy = curr_gps_location.accuracy;
 
-	spin_unlock(&gps_lock);
+	write_unlock(&i_gps_lock);
+	read_unlock(&gps_lock);
 
 	return 0;
 }
@@ -1618,7 +1620,7 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
 {	
 	struct ext2_inode_info *ext2_info = EXT2_I(inode);
 
-	spin_lock(&gps_lock);
+	read_lock(&i_gps_lock);
 
 	buf->lat_integer = ext2_info->i_lat_integer;
 	buf->lat_fractional = ext2_info->i_lat_fractional;
@@ -1626,7 +1628,7 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
 	buf->lng_fractional = ext2_info->i_lng_fractional;
 	buf->accuracy = ext2_info->i_accuracy;
 
-	spin_unlock(&gps_lock);
+	read_unlock(&i_gps_lock);
 
 	return 0;
 }
