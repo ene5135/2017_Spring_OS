@@ -564,6 +564,9 @@ got:
 	ei->i_block_alloc_info = NULL;
 	ei->i_block_group = group;
 	ei->i_dir_start_lookup = 0;
+
+	// geungook initialize new fields?
+
 	ei->i_state = EXT2_STATE_NEW;
 	ext2_set_inode_flags(inode);
 	spin_lock(&sbi->s_next_gen_lock);
