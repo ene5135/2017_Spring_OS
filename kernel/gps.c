@@ -6,7 +6,6 @@
 #include <asm-generic/uaccess.h>
 #include <linux/fs.h>
 
-DEFINE_RWLOCK(gps_lock);
 
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
 {
