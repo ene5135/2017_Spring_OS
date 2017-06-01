@@ -594,7 +594,9 @@ static void ext2_splice_branch(struct inode *inode,
 		mark_buffer_dirty_inode(where->bh, inode);
 
 	inode->i_ctime = CURRENT_TIME_SEC;
-	inode->i_op->set_gps_location(inode); // atleasta0 
+
+	if(inode->i_op->set_gps_location)
+		inode->i_op->set_gps_location(inode); // atleasta0 
 
 	mark_inode_dirty(inode);
 }
@@ -1218,7 +1220,10 @@ static int ext2_setsize(struct inode *inode, loff_t newsize)
 	__ext2_truncate_blocks(inode, newsize);
 
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME_SEC;
-	inode->i_op->set_gps_location(inode); // atleasta0 
+
+
+	if(inode->i_op->set_gps_location)
+		inode->i_op->set_gps_location(inode); // atleasta0 
 	// called in ext2_setattr
 	if (inode_needs_sync(inode)) {
 		sync_mapping_buffers(inode->i_mapping);
