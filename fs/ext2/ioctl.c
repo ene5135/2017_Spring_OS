@@ -80,9 +80,9 @@ long ext2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		ext2_set_inode_flags(inode);
 		inode->i_ctime = CURRENT_TIME_SEC;
-		inode->i_op->set_gps_location(inode); // atleasta0 
-	
 
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode); // atleasta0 
 
 		mutex_unlock(&inode->i_mutex);
 
@@ -109,7 +109,10 @@ setflags_out:
 		mutex_lock(&inode->i_mutex);
 		inode->i_ctime = CURRENT_TIME_SEC;
 		inode->i_generation = generation;
-		inode->i_op->set_gps_location(inode); // atleasta0 
+
+
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode); // atleasta0 
 
 		mutex_unlock(&inode->i_mutex);
 
