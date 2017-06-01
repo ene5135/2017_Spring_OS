@@ -37,6 +37,10 @@
 #include "xip.h"
 #include "xattr.h"
 
+extern rwlock_t gps_lock;
+extern rwlock_t i_gps_lock;
+extern struct gps_location curr_gps_location;
+
 static int __ext2_write_inode(struct inode *inode, int do_sync);
 
 /*

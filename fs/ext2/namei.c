@@ -414,7 +414,7 @@ const struct inode_operations ext2_dir_inode_operations = {
 	.get_acl	= ext2_get_acl,
 	// atleasta0
 	.set_gps_location	= ext2_set_gps_location,
-	.get_gps_location	= ext2_get_gps_loaction,
+	.get_gps_location	= ext2_get_gps_location,
 
 	.permission		= ext2_permission,
 };
@@ -431,7 +431,7 @@ const struct inode_operations ext2_special_inode_operations = {
 
 	// atleasta0
 	.set_gps_location	= ext2_set_gps_location,
-	.get_gps_location	= ext2_get_gps_loaction,
+	.get_gps_location	= ext2_get_gps_location,
 
 	.permission		= ext2_permission,
 };
