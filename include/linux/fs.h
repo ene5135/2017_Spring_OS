@@ -32,6 +32,8 @@
 #include <asm/byteorder.h>
 #include <uapi/linux/fs.h>
 
+#include <linux/gps.h>
+
 struct export_operations;
 struct hd_geometry;
 struct iovec;
@@ -1564,6 +1566,9 @@ struct inode_operations {
 	int (*atomic_open)(struct inode *, struct dentry *,
 			   struct file *, unsigned open_flag,
 			   umode_t create_mode, int *opened);
+// atleasta0
+	int (*set_gps_location)(struct inode *);
+	int (*get_gps_location)(struct inode *, struct gps_location *);
 } ____cacheline_aligned;
 
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
