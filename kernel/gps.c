@@ -2,14 +2,20 @@
 // #include <linux/linkage.h>
 // #include <linux/sched.h>
 
-#include <linux/gps.h>
 #include <asm-generic/uaccess.h>
 #include <linux/fs.h>
+#include <linux/namei.h>
+
+struct gps_location curr_gps_location = {0,0,0,0,0};
+
+DEFINE_RWLOCK(gps_lock); // lock for global gps_location
+DEFINE_RWLOCK(i_gps_lock); // lock for inode gps_location
+
 
 
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
 {
-	struct gps_location *tmp_loc;
+	struct gps_location *tmp_loc = NULL;
 	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0)
 		return -EACCES;
@@ -19,7 +25,7 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 
 	write_lock(&gps_lock);
 	
-	memcpy(&curr_gps_loc, tmp_loc, sizeof(*tmp_loc));
+	memcpy(&curr_gps_location, tmp_loc, sizeof(*tmp_loc));
 
 	write_unlock(&gps_lock);
 
@@ -32,9 +38,10 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	struct path fp;
 	struct inode *inode;
 	struct gps_location *tmp_loc;
-	const char *pname;
+	char *pname;
 	int len;
-
+	tmp_loc = NULL;
+	pname = NULL;
 	len = strlen_user(pathname);
 	copy_from_user(pname, pathname, len);
 
@@ -43,7 +50,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	
 	inode = fp.dentry->d_inode;
 	
-	if (get_gps_location(inode, tmp_loc) < 0)
+	if (inode->i_op->get_gps_location(inode, tmp_loc) < 0)
 		return -ENODEV;
 	
 	copy_to_user(loc, tmp_loc, sizeof(*tmp_loc));
