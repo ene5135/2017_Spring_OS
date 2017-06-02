@@ -30,7 +30,7 @@ int set_gps_location(struct gps_location __user *loc);
 As you can see, the system call get's only a `gps_location` argument from user. By getting user space's data safely, we used `copy_from_user` and `access_ok` functions. And the kernel's `gps_location` is updated as same as the user's value. By protecting the kernel's location variable, we locked it by `write_lock`. Also this system call checks whether the user's `gps_location` value is appropriate or not.
 
 ### 2-2. `sys_get_gps_location`
-This system call gets a file's path from user and give user back the corresponding file's `gps_location`. By find out corresponding `inode`, we used `user_path` function. 
+This system call gets a file's path from user and give user back the corresponding file's `gps_location`. By find out corresponding `inode`, we used `user_path` function. `user_path` is kernel safe function, which uses `copy_from_user` inside.
 ```c
 asmlinkage long sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
@@ -91,7 +91,7 @@ else permission_granted();
 ```
 There were some utilization in our actual kernel code. We couldn't use `sqrt()` function, so instead, we compared as squared values. Also because of range limitation of primitive variables, we decided to divide some factors instead of multiplying. Also, the devision operator didn't work well, so we just shift right 17 times(131,072) instead of dividing 111,644.
 
-Fortunately, the assumptions above can cover whole earth surface pretty accurately.
+Fortunately, the assumptions above can cover whole earth surface pretty accurately. We linked the `ext2_permission` function only in `file.c`, not in `symlink.c` which manages special I/O files and `dir.c` which manages directories.
 
 ## 4. user space programs
 `gpsupdate.c` updates the kernel's `gps_location` value by getting coordinates from user. It calls `sys_set_gps_location` inside.
