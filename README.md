@@ -91,7 +91,7 @@ else permission_granted();
 ```
 There were some utilization in our actual kernel code. We couldn't use `sqrt()` function, so instead, we compared as squared values. Also because of range limitation of primitive variables, we decided to divide some factors instead of multiplying. Also, the devision operator didn't work well, so we just shift right 17 times(131,072) instead of dividing 111,644.
 
-Fortunately, the assumptions above can cover whole earth surface pretty accurately. We linked the `ext2_permission` function only in `file.c`, not in `symlink.c` which manages special I/O files and `dir.c` which manages directories.
+Fortunately, the assumptions above can cover whole earth surface pretty accurately. We linked the `ext2_permission` function only in `file.c`, not in `symlink.c` and `dir.c` which manages special I/O files and directories.
 
 ## 4. user space programs
 `gpsupdate.c` updates the kernel's `gps_location` value by getting coordinates from user. It calls `sys_set_gps_location` inside.
