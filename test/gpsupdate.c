@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "../include/linux/gps.h"
+#define ABS(x) (((x) < 0) ? (-1*(x)) : (x))
 
 int main(int argc, char* argv[]) {
 
@@ -14,19 +15,11 @@ int main(int argc, char* argv[]) {
 	double lng = atof(argv[2]);
 	int acc = atoi(argv[3]);
 
-	if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || acc < 0) {
-		printf("arguments value error\n");
-		return 0;
-	}
-
 	int lat_integer = (int) lat;
-	int lat_fractional = (lat - lat_integer) * 1000000;
+	int lat_fractional = ABS((lat - lat_integer) * 1000000);
 	int lng_integer = (int) lng;
-	int lng_fractional = (lng - lng_integer) * 1000000;
+	int lng_fractional = ABS((lng - lng_integer) * 1000000);
 
-
-	printf("latitude : %d.%d\n lngitude : %d.%d\n accuracy : %d\n", 
-			lat_integer, lat_fractional, lng_integer, lng_fractional, acc);
 
 	struct gps_location *loc = malloc(sizeof(struct gps_location));
 
@@ -36,7 +29,17 @@ int main(int argc, char* argv[]) {
 	loc->lng_fractional = lng_fractional;
 	loc->accuracy = acc;
 
-	syscall(380, loc);
+
+	if (syscall(380, loc) < 0) {
+		free(loc);
+		printf("system call error\n");
+		return 0;
+	}
+
+	printf("latitude : %d.%d\n lngitude : %d.%d\n accuracy : %d\n", 
+			lat_integer, lat_fractional, lng_integer, lng_fractional, acc);
+
+
 
 	free(loc);
 

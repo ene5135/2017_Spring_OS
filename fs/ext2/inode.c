@@ -1657,8 +1657,9 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
       because it's hard to implement square root function in here.
 */
 
-#define ABS(x) ((x < 0) ? ((-1)*(x)) : (x))
+#define ABS(x) (((x) < 0) ? ((-1)*(x)) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define FRAC_SIGN(x) (((x) < 0) ? (-1L) : (1L))
 
 int ext2_permission(struct inode *inode, int mask)
 {
@@ -1687,13 +1688,13 @@ int ext2_permission(struct inode *inode, int mask)
 
 	read_lock(&gps_lock);
 
-	file_lat = ((long) loc.lat_integer) * FACTOR + ((long) loc.lat_fractional);
-	file_lng = ((long) loc.lng_integer) * FACTOR + ((long) loc.lng_fractional);
+	file_lat = ((long) loc.lat_integer) * FACTOR + ((long) loc.lat_fractional) * FRAC_SIGN(loc.lat_integer);
+	file_lng = ((long) loc.lng_integer) * FACTOR + ((long) loc.lng_fractional) * FRAC_SIGN(loc.lng_integer);
 
 	printk(KERN_DEBUG "[DEBUG] file_lat : %ld.  file_lng : %ld\n", file_lat, file_lng);
 
-	curr_lat = ((long) curr_gps_location.lat_integer) * FACTOR + ((long) curr_gps_location.lat_fractional);
-	curr_lng = ((long) curr_gps_location.lng_integer) * FACTOR + ((long) curr_gps_location.lng_fractional);
+	curr_lat = ((long) curr_gps_location.lat_integer) * FACTOR + ((long) curr_gps_location.lat_fractional) * FRAC_SIGN(curr_gps_location.lat_integer);
+	curr_lng = ((long) curr_gps_location.lng_integer) * FACTOR + ((long) curr_gps_location.lng_fractional) * FRAC_SIGN(curr_gps_location.lng_integer);
 
 	printk(KERN_DEBUG "[DEBUG] curr_lat : %ld, curr_lng : %ld\n", curr_lat, curr_lng);
 
