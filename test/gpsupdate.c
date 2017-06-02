@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	printf("latitude : %d.%d\n lngitude : %d.%d\n accuracy : %d\n", 
-			lat_integer, lat_fractional, lng_integer, lng_fractional, acc);
+	printf("latitude : %f\n lngitude : %f\n accuracy : %d\n", 
+			(double)lat_integer+((double)lat_fractional)/1000000, (double)lng_integer+((double)lng_fractional)/1000000, acc);
 
 
 	free(loc);
