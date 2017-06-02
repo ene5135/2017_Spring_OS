@@ -61,6 +61,38 @@ This function simply set `gps_location` of the file same as kernel's. The import
 This function is only called by `sys_get_gps_location`, which needs the `gps_location` of specific file. To get `gps_location` from `inode`, the function uses macro `EXT2_I`. `EXT2_I` gets `inode` and returns `ext2_inode_info` pointer. `ext2_inode_info` is the inode information which stays on the memory. 
 
 ### 3-3. `ext2_permission`
+The core part of this project.
+```c
+int ext2_permission(struct inode *inode, int mask)
+{
+  ...
+  if (generic_permission(inode, mask)) {
+    ...
+  }
+  ...
+  
+  /*
+   * Additional permission check by gps location and accuracy is below
+   */ 
+  ...
+}
+```
+Additional permission check should be done by our policy. The assumptions are below.
+
+1. The earth is flat. Using Pythagoras' law, we can calculate distance of two spots precisely.
+2. If there is 1 degree difference between two spots, they are 111,644m distant. (111,644m came from 2*pi*6400(km)/360(degree) (actually we adjusted the ratio by 131,072m/degree. The reason is below)
+
+Let's assume that `lat_diff` is difference of latitude between a specific file and kernel. Also `lng_diff` is difference of longitude(degree). `accuracy` is sum of each one's accuracy(m). Then, calculation of `distance` between two spots and permission decision can be done by pseudo code below.
+```c 
+diff = sqrt(lat_diff^2 + lng_diff^2);  /* degree */
+distance = diff * 111,644;  /* meter */
+if (distance > accuracy) permission_denied();
+else permission_granted();
+```
+There were some utilization in our actual kernel code. We couldn't use `sqrt()` function, so instead, we decided permission to grant or not by comparing their squared values. Also because of range limitation of primitive variables, we decided to divide some factors instead of multiplying. Also, the devision operator didn't work well, so we just shift right 17 times(131,072) instead of dividing 111,644.
+
+Fortunately, the assumptions above can cover whole earth surface pretty accurately.
+
 ## 4. user space programs
 how the permission is granted. 
 
