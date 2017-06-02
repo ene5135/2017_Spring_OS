@@ -17,6 +17,11 @@ DEFINE_RWLOCK(i_gps_lock); // lock for inode gps_location
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
 {
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
+	if(!access_ok(VERIFY_WRITE, loc, sizeof(struct gps_location)))
+	{
+		kfree(tmp_loc);
+		return -EFAULT;
+	}
 
 //	printk(KERN_ERR "tmp_loc kmalloced\n");
 //	struct gps_location *tmp_loc = NULL;
@@ -50,33 +55,33 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	struct inode *inode;
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 	int err=0;
-//	char *pname;
-	//int len;
+	
+	int len = strlen_user(pathname);
 
-//	int debug=0;
-
-	//len = strlen_user(pathname);
-
-	//pname = kzalloc(sizeof(char __user) * (len+1), GFP_KERNEL);
-	//copy_from_user(pname, pathname, sizeof(char __user) * (len+1));
-	//strncpy_from_user(pname,pathname,len);
-	//debug = user_path(pathname, &fp);
-
-///////////////////////////////////////
-
-	// atleasta0
-	// user_path() must receive (char __user *) type path name.	otherwise it causes error.(-EFAULT)
-	// plus, in user_path(), it calls strncpy_from_user(),
-	// that means we don't need to use copy_from_user() function and so on.
-
-//////////////////////////////////////
-
-	if (user_path(pathname, &fp) < 0) {
-//	if (debug < 0) {
+	if(!access_ok(VERIFY_WRITE, pathname, len+1))
+	{
 		kfree(tmp_loc);
-//		kfree(pname);
-//		printk(KERN_DEBUG "errno = %d\n",debug);
-		return -EACCES;
+		return -EFAULT;
+	}
+
+	if(!access_ok(VERIFY_WRITE, loc, sizeof(struct gps_location)))
+	{
+		kfree(tmp_loc);
+		return -EFAULT;
+	}
+
+	/* 
+	 atleasta0
+	 user_path() must receive (char __user *) type path name.	otherwise it causes error.(-EFAULT)
+	 plus, in user_path(), it calls strncpy_from_user(),
+	 that means we don't need to use copy_from_user() function and so on.
+	*/
+	err = user_path(pathname, &fp);
+	if (err < 0) {
+		if(err == -EACCES)
+			printk(KERN_ERR "failed to get gps location : Permission denied\n");
+		kfree(tmp_loc);
+		return err;
 	}
 
 	
@@ -84,6 +89,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 
 	if (!inode->i_op->get_gps_location) // if it is not ext2fs
 	{
+		printk(KERN_ERR "the file system is not ext2fs\n");
 		kfree(tmp_loc);
 		return -ENODEV;
 	}
@@ -91,20 +97,18 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	else // check permission first, and then get return value
 	{
 		err = inode_permission(inode,MAY_READ);
-		if(err < 0)
+		if (err < 0)
 		{
+			printk(KERN_ERR "failed to get gps location : Permission denied\n");
 			kfree(tmp_loc);
 			return err;
 		}
 		inode->i_op->get_gps_location(inode, tmp_loc);
 	}
 
-
-	
 	copy_to_user(loc, tmp_loc, sizeof(*tmp_loc));
 
 	kfree(tmp_loc);
-//	kfree(pname);
 
 	return 0;
 }

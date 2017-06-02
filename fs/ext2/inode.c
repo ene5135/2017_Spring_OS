@@ -1657,20 +1657,20 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
       because it's hard to implement square root function in here.
 */
 
-#define ABS(x) ((x < 0) ? (-x) : (x))
+#define ABS(x) ((x < 0) ? ((-1)*(x)) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 int ext2_permission(struct inode *inode, int mask)
 {
 	int ret;
-	const int FACTOR = 1000000;
-	const int METER_PER_DEGREE = 111644; /* 2 * pi * 6400000(m) / 360(degree) = 111644.444 */
+	long FACTOR = 1000000;
+	unsigned long long METER_PER_DEGREE = 111644; /* 2 * pi * 6400000(m) / 360(degree) = 111644.444 */
 	struct gps_location loc;
 	long file_lat;
 	long file_lng;
 	long curr_lat;
 	long curr_lng;
-	long accuracy;
+	unsigned long long accuracy;
 	long lng_diff;
 	long lat_diff;
 	unsigned long long diff_squared;
@@ -1678,41 +1678,43 @@ int ext2_permission(struct inode *inode, int mask)
 
 
 	// if generic_permission return negative value, permission denied
-	if( (ret = generic_permission(inode,mask)) != 0)
+	if( (ret = generic_permission(inode,mask)) != 0){
+		printk(KERN_DEBUG "[DEBUG] GENERIC_PERMISSION DENIED");
 		return ret;
+	}
 
 	inode->i_op->get_gps_location(inode, &loc);
 
-	file_lat = loc.lat_integer * FACTOR + loc.lat_fractional;
-	file_lng = loc.lng_integer * FACTOR + loc.lng_fractional;
+	read_lock(&gps_lock);
 
-	printk(KERN_DEBUG "[DEBUG] file_lat : %ld, file_lng : %ld\n", file_lat, file_lng);
+	file_lat = ((long) loc.lat_integer) * FACTOR + ((long) loc.lat_fractional);
+	file_lng = ((long) loc.lng_integer) * FACTOR + ((long) loc.lng_fractional);
 
-	curr_lat = curr_gps_location.lat_integer * FACTOR + curr_gps_location.lat_fractional;
-	curr_lng = curr_gps_location.lng_integer * FACTOR + curr_gps_location.lng_fractional;
+	printk(KERN_DEBUG "[DEBUG] file_lat : %ld.  file_lng : %ld\n", file_lat, file_lng);
+
+	curr_lat = ((long) curr_gps_location.lat_integer) * FACTOR + ((long) curr_gps_location.lat_fractional);
+	curr_lng = ((long) curr_gps_location.lng_integer) * FACTOR + ((long) curr_gps_location.lng_fractional);
 
 	printk(KERN_DEBUG "[DEBUG] curr_lat : %ld, curr_lng : %ld\n", curr_lat, curr_lng);
 
-	accuracy = (loc.accuracy + curr_gps_location.accuracy) * FACTOR;
+	accuracy = ( (unsigned long long)(loc.accuracy) + (unsigned long long)(curr_gps_location.accuracy)) * (unsigned long long) FACTOR;
+	printk(KERN_DEBUG "[DEBUG] loc.accuracy(degree) = %ld\n, curr_gps.accuracy(degree) = %ld\n",
+			(long) loc.accuracy, (long) curr_gps_location.accuracy);
+	printk(KERN_DEBUG "[DEBUG] accuracy : %llu\n", accuracy);
 	
-	printk(KERN_DEBUG "[DEBUG] accuracy : %ld\n", accuracy);
-	
-	lng_diff = MIN( ABS(file_lng - curr_lng), 360 - ABS(file_lng - curr_lng));
-	lat_diff = ABS(file_lat - curr_lat);
-	diff_squared = lng_diff * lng_diff + lat_diff * lat_diff;
-	accuracy_squared = (accuracy * accuracy) / (METER_PER_DEGREE * METER_PER_DEGREE);
-
+	lng_diff = MIN( ABS(file_lng - curr_lng), 360*FACTOR - ABS(file_lng - curr_lng));
+	lat_diff = ABS(file_lat - curr_lat); 
+	diff_squared =((unsigned long long)(ABS(lng_diff))) * ((unsigned long long)(ABS(lng_diff))) + ((unsigned long long)(ABS(lat_diff))) * ((unsigned long long)(ABS(lat_diff)));
+	accuracy_squared = (accuracy >> 17) * (accuracy >> 17);
 	printk(KERN_DEBUG "[DEBUG] lng_diff : %ld, lat_diff : %ld\n", lng_diff, lat_diff);
 	printk(KERN_DEBUG "[DEBUG] diff_squared : %llu\n", diff_squared);
-	printk(KERN_DEBUG "[DEBUG] accuracy_squared : %llu\n", accuracy_squared);
+	printk(KERN_DEBUG "[DEBUG] accuracy(degree)_squared : %llu\n", accuracy_squared);
 
-	if (diff_squared > accuracy_squared)
+	read_unlock(&gps_lock);
+
+	if (diff_squared > accuracy_squared){
+		printk(KERN_DEBUG "[DEBUG] DENIED BY GPS");
 		return -EACCES;
-	
+	}
 	return 0;
 }
-
-
-
-
-
