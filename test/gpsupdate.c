@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "../include/linux/gps.h"
+#include <uapi/asm-generic/errno-base.h>
 #define ABS(x) (((x) < 0) ? (-1*(x)) : (x))
 int main(int argc, char* argv[]) {
 
@@ -13,7 +14,8 @@ int main(int argc, char* argv[]) {
 	double lat = atof(argv[1]);
 	double lng = atof(argv[2]);
 	int acc = atoi(argv[3]);
-
+	
+	int err= 0;
 
 	int lat_integer = (int) lat;
 	int lat_fractional = ABS((lat - lat_integer) * 1000000);
@@ -29,9 +31,13 @@ int main(int argc, char* argv[]) {
 	loc->lng_fractional = lng_fractional;
 	loc->accuracy = acc;
 
-	if(syscall(380, loc) < 0) {
+	if( (err = syscall(380, loc)) < 0) {
 		free(loc);
-		printf("system call error\n");
+		printf("[error] sys_set_gps_location : ");
+		if(err == -EINVAL)
+			printf("Invalid argument\n");
+		else
+			printf("Unexpected error\n");
 		return 0;
 	}
 

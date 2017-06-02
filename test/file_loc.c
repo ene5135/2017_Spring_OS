@@ -2,20 +2,30 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "../include/linux/gps.h"
+#include <uapi/asm-generic/errno-base.h>
 
 int main(int argc, char *argv[]) {
 
 	if (argc != 2) {
-		printf("no file path error\n");
+		printf("argument error : need file path\n");
 		return 0;
 	}
-
+	
+	int err=0;
 	const char *pathname = argv[1];
 	struct inode *inode;
 	struct gps_location *loc = malloc(sizeof(struct gps_location));
 
-	if (syscall(381, pathname, loc) < 0) {
-		printf("error\n");
+	if ((err = syscall(381, pathname, loc)) < 0) {
+		printf("[error] sys_get_gps_location : ");
+		if(err == -EACCES)
+			printf("Permission denied\n");
+		else if(err == -ENODEV)
+			printf("The file system is not ext2 file system\n");
+		else if(err == -EFAULT)
+			printf("Bad address\n"); 
+		else
+			printf("Unexpected error\n");
 		return 0;
 	}
 
