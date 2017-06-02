@@ -1685,6 +1685,8 @@ int ext2_permission(struct inode *inode, int mask)
 
 	inode->i_op->get_gps_location(inode, &loc);
 
+	read_lock(&gps_lock);
+
 	file_lat = ((long) loc.lat_integer) * FACTOR + ((long) loc.lat_fractional);
 	file_lng = ((long) loc.lng_integer) * FACTOR + ((long) loc.lng_fractional);
 
@@ -1707,6 +1709,8 @@ int ext2_permission(struct inode *inode, int mask)
 	printk(KERN_DEBUG "[DEBUG] lng_diff : %ld, lat_diff : %ld\n", lng_diff, lat_diff);
 	printk(KERN_DEBUG "[DEBUG] diff_squared : %llu\n", diff_squared);
 	printk(KERN_DEBUG "[DEBUG] accuracy(degree)_squared : %llu\n", accuracy_squared);
+
+	read_unlock(&gps_lock);
 
 	if (diff_squared > accuracy_squared){
 		printk(KERN_DEBUG "[DEBUG] DENIED BY GPS");
