@@ -19,7 +19,7 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 
 //	printk(KERN_ERR "tmp_loc kmalloced\n");
-	struct gps_location *tmp_loc = NULL;
+//	struct gps_location *tmp_loc = NULL;
 	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0) {
 		kfree(tmp_loc);
@@ -48,7 +48,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 {
 	struct path fp;
 	struct inode *inode;
-	struct gps_location *tmp_loci = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
+	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 	int err=0;
 //	char *pname;
 	//int len;
@@ -75,7 +75,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 //	if (debug < 0) {
 		kfree(tmp_loc);
 //		kfree(pname);
-		printk(KERN_DEBUG "errno = %d\n",debug);
+//		printk(KERN_DEBUG "errno = %d\n",debug);
 		return -EACCES;
 	}
 
