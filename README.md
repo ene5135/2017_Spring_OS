@@ -52,11 +52,14 @@ asmlinkage long sys_get_gps_location(const char __user *pathname, struct gps_loc
 Also this system call calls the `inode_permission` like above, to checkout whether the file is okay to be read by user. If the system call decides that this file is forbidden to user, than `gps_location` of the file will not be returned.
 
 ## 3. `ext2_inode_operations` implementation
-we need to append the following fields at the end of the ext2 inode structure.
+Like previous scheduler project, we have to implement three functions for `ext2` file system and link it to the `struct inode_operations`. There are several files which links the specific file system function pointers to global file system function, but we just linked only one file, `file.c`.
 
 ### 3-1. `ext2_set_gps_location`
-where to call set_gps_location?
+This function simply set `gps_location` of the file same as kernel's. The important thing is that when does this function should be called. According to the project specification document, the `gps_location` of the file should be updated when the file is modified. So, we decided to track `i_mtime`, which is the member of `inode`, represents the modification time of the file. The reason is that when the file is modified, always `i_mtime` is modified together, and `gps_location` also should be modified. We checked all the kernel source and found out all the points where `i_mtime` is modified, and simply put the function close to them.
+
 ### 3-2. `ext2_get_gps_location`
+This function is only called by `sys_get_gps_location`, which needs the `gps_location` of specific file. To get `gps_location` from `inode`, the function uses macro `EXT2_I`. `EXT2_I` gets `inode` and returns `ext2_inode_info` pointer. `ext2_inode_info` is the inode information which stays on the memory. 
+
 ### 3-3. `ext2_permission`
 ## 4. user space programs
 how the permission is granted. 
