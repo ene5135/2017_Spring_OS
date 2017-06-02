@@ -7,10 +7,11 @@
 #include <linux/namei.h>
 #include <linux/slab.h>
 
+struct gps_location curr_gps_location = {0,0,0,0,0};
+
 DEFINE_RWLOCK(gps_lock); // lock for global gps_location
 DEFINE_RWLOCK(i_gps_lock); // lock for inode gps_location
 
-struct gps_location curr_gps_location = {0,0,0,0,0};
 
 
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
@@ -18,6 +19,7 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 
 //	printk(KERN_ERR "tmp_loc kmalloced\n");
+	struct gps_location *tmp_loc = NULL;
 	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0) {
 		kfree(tmp_loc);
@@ -52,6 +54,11 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 
 	int debug=0;
 
+	struct gps_location *tmp_loc;
+	char *pname;
+	int len;
+	tmp_loc = NULL;
+	pname = NULL;
 	len = strlen_user(pathname);
 
 	//pname = kzalloc(sizeof(char __user) * (len+1), GFP_KERNEL);
@@ -77,8 +84,8 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	}
 
 	
-	inode = fp.dentry->d_inode;
 	
+	inode = fp.dentry->d_inode;
 	if (inode->i_op->get_gps_location(inode, tmp_loc) < 0) {
 		kfree(tmp_loc);
 //		kfree(pname);
