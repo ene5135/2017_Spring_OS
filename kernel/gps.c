@@ -7,10 +7,11 @@
 #include <linux/namei.h>
 #include <linux/slab.h>
 
+struct gps_location curr_gps_location = {0,0,0,0,0};
+
 DEFINE_RWLOCK(gps_lock); // lock for global gps_location
 DEFINE_RWLOCK(i_gps_lock); // lock for inode gps_location
 
-struct gps_location curr_gps_location = {0,0,0,0,0};
 
 
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
@@ -18,6 +19,7 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 
 //	printk(KERN_ERR "tmp_loc kmalloced\n");
+	struct gps_location *tmp_loc = NULL;
 	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0) {
 		kfree(tmp_loc);
