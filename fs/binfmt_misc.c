@@ -478,6 +478,8 @@ static struct inode *bm_get_inode(struct super_block *sb, int mode)
 	if (inode) {
 		inode->i_ino = get_next_ino();
 		inode->i_mode = mode;
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode);
 		inode->i_atime = inode->i_mtime = inode->i_ctime =
 			current_fs_time(inode->i_sb);
 	}

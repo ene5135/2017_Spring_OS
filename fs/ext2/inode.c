@@ -1619,7 +1619,7 @@ int ext2_set_gps_location(struct inode * inode)
 
 	ext2_info->i_lat_integer = curr_gps_location.lat_integer;
 	ext2_info->i_lat_fractional = curr_gps_location.lat_fractional;
-	ext2_info->i_lng_integer = curr_gps_location.lng_fractional;
+	ext2_info->i_lng_integer = curr_gps_location.lng_integer;
 	ext2_info->i_lng_fractional = curr_gps_location.lng_fractional;
 	ext2_info->i_accuracy = curr_gps_location.accuracy;
 

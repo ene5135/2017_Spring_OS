@@ -47,7 +47,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	struct path fp;
 	struct inode *inode;
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
-	char *pname;
+//	char *pname;
 	int len;
 
 	int debug=0;
