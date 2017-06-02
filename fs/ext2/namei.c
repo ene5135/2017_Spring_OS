@@ -279,6 +279,8 @@ static int ext2_unlink(struct inode * dir, struct dentry *dentry)
 		goto out;
 
 	inode->i_ctime = dir->i_ctime;
+	if(inode->i_op->set_gps_location)
+		inode->i_op->set_gps_location(inode);
 	inode_dec_link_count(inode);
 	err = 0;
 out:
