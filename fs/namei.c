@@ -159,6 +159,7 @@ recopy:
 	len = strncpy_from_user(kname, filename, max);
 	if (unlikely(len < 0)) {
 		err = ERR_PTR(len);
+//		printk(KERN_DEBUG "d : sdfadsd \n");
 		goto error;
 	}
 
@@ -2163,14 +2164,18 @@ struct dentry *lookup_one_len(const char *name, struct dentry *base, int len)
 int user_path_at_empty(int dfd, const char __user *name, unsigned flags,
 		 struct path *path, int *empty)
 {
+	// atleasta0debugging
 	struct nameidata nd;
 	struct filename *tmp = getname_flags(name, flags, empty);
+	//printk(KERN_DEBUG "a\n");
 	int err = PTR_ERR(tmp);
+	//printk(KERN_DEBUG "b err : %d\n", err);
 	if (!IS_ERR(tmp)) {
 
 		BUG_ON(flags & LOOKUP_PARENT);
 
 		err = filename_lookup(dfd, tmp, flags, &nd);
+	//	printk(KERN_DEBUG "c err : %d\n", err);
 		putname(tmp);
 		if (!err)
 			*path = nd.path;

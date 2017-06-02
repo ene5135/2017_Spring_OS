@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
 	const char *pathname = argv[1];
 	struct inode *inode;
-	struct gps_location *loc;
+	struct gps_location *loc = malloc(sizeof(struct gps_location));
 
 	if (syscall(381, pathname, loc) < 0) {
 		printf("error\n");
@@ -25,13 +25,13 @@ int main(int argc, char *argv[]) {
 	int lng_fractional = loc->lng_fractional;
 	int accuracy = loc->accuracy;
 
-	double lat = lat_integer + lat_fractional / 1000000;
-	double lng = lng_integer + lng_fractional / 1000000;
+	double lat = lat_integer + (double) lat_fractional / 1000000;
+	double lng = lng_integer + (double) lng_fractional / 1000000;
 
 
 	printf("latitude : %f\nlongitude : %f\naccuracy(m) : %d\n", 
 			lat, lng, accuracy);
-	printf("https://www.google.com/maps/@%lf,%lf,11z", lat, lng);
+	printf("https://www.google.com/maps/@%lf,%lf,11z\n", lat, lng);
 
 	return 0;
 }

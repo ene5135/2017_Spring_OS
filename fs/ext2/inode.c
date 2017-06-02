@@ -1648,10 +1648,10 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
 
 int ext2_permission(struct inode *inode, int mask)
 {
-	int ret=0;
+	int ret = 0;
 	ret = generic_permission(inode,mask);
 	
-	if(ret != 0)
+	// if (ret != 0)
 		return ret;
 	
 /* TODO insert our gps-permission policy */

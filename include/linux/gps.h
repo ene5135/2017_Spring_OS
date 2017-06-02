@@ -8,4 +8,3 @@ struct gps_location {
 	int accuracy;
 };
 
-
