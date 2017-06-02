@@ -1646,14 +1646,73 @@ int ext2_get_gps_location(struct inode * inode, struct gps_location * buf)
 	return 0;
 }
 
+
+/*
+   
+   1. because we cannot use fractional variables in kernel, 
+   	  we multiplied 1000000 for all values and keep them in integer.
+   2. on earth surface, if two spots latitude or longitude differs by 1 degree, 
+      than actual distance between two spots are about 1116444 m.
+   3. we decided to compare distance and accuracy by their squared values,
+      because it's hard to implement square root function in here.
+*/
+
+#define ABS(x) ((x < 0) ? (-x) : (x))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+
 int ext2_permission(struct inode *inode, int mask)
 {
-	int ret = 0;
-	ret = generic_permission(inode,mask);
-	
-	// if (ret != 0)
-		return ret;
-	
-/* TODO insert our gps-permission policy */
+	int ret;
+	const int FACTOR = 1000000;
+	const int METER_PER_DEGREE = 111644; /* 2 * pi * 6400000(m) / 360(degree) = 111644.444 */
+	struct gps_location loc;
+	long file_lat;
+	long file_lng;
+	long curr_lat;
+	long curr_lng;
+	long accuracy;
+	long lng_diff;
+	long lat_diff;
+	unsigned long long diff_squared;
+	unsigned long long accuracy_squared;
 
+
+	// if generic_permission return negative value, permission denied
+	if( (ret = generic_permission(inode,mask)) != 0)
+		return ret;
+
+	inode->i_op->get_gps_location(inode, &loc);
+
+	file_lat = loc.lat_integer * FACTOR + loc.lat_fractional;
+	file_lng = loc.lng_integer * FACTOR + loc.lng_fractional;
+
+	printk(KERN_DEBUG "[DEBUG] file_lat : %ld, file_lng : %ld\n", file_lat, file_lng);
+
+	curr_lat = curr_gps_location.lat_integer * FACTOR + curr_gps_location.lat_fractional;
+	curr_lng = curr_gps_location.lng_integer * FACTOR + curr_gps_location.lng_fractional;
+
+	printk(KERN_DEBUG "[DEBUG] curr_lat : %ld, curr_lng : %ld\n", curr_lat, curr_lng);
+
+	accuracy = (loc.accuracy + curr_gps_location.accuracy) * FACTOR;
+	
+	printk(KERN_DEBUG "[DEBUG] accuracy : %ld\n", accuracy);
+	
+	lng_diff = MIN( ABS(file_lng - curr_lng), 360 - ABS(file_lng - curr_lng));
+	lat_diff = ABS(file_lat - curr_lat);
+	diff_squared = lng_diff * lng_diff + lat_diff * lat_diff;
+	accuracy_squared = (accuracy * accuracy) / (METER_PER_DEGREE * METER_PER_DEGREE);
+
+	printk(KERN_DEBUG "[DEBUG] lng_diff : %ld, lat_diff : %ld\n", lng_diff, lat_diff);
+	printk(KERN_DEBUG "[DEBUG] diff_squared : %llu\n", diff_squared);
+	printk(KERN_DEBUG "[DEBUG] accuracy_squared : %llu\n", accuracy_squared);
+
+	if (diff_squared > accuracy_squared)
+		return -EACCES;
+	
+	return 0;
 }
+
+
+
+
+
