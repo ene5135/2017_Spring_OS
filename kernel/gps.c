@@ -12,8 +12,6 @@ struct gps_location curr_gps_location = {0,0,0,0,0};
 DEFINE_RWLOCK(gps_lock); // lock for global gps_location
 DEFINE_RWLOCK(i_gps_lock); // lock for inode gps_location
 
-
-
 asmlinkage long sys_set_gps_location(struct gps_location __user *loc) 
 {
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
@@ -23,9 +21,6 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 		return -EFAULT;
 	}
 
-//	printk(KERN_ERR "tmp_loc kmalloced\n");
-//	struct gps_location *tmp_loc = NULL;
-	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0) {
 		kfree(tmp_loc);
 		return -EACCES;
@@ -36,11 +31,23 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 		return -EINVAL;
 	}
 
+	if (tmp_loc->lat_fractional > 999999 || tmp_loc->lat_fractional < 0 ||
+ 		tmp_loc->lng_fractional > 999999 || tmp_loc->lng_fractional < 0 ||
+ 		tmp_loc->lat_integer > 90 || tmp_loc->lat_integer < -90 ||
+ 		tmp_loc->lng_integer > 180 || tmp_loc->lng_integer < -180 ||
+ 		((tmp_loc->lat_integer == 90 || tmp_loc->lat_integer == -90) 
+ 		 		&& tmp_loc->lat_fractional != 0) ||
+ 		((tmp_loc->lng_integer == 180 || tmp_loc->lng_integer == -180) 
+ 		 		&& tmp_loc->lng_fractional != 0) ||
+ 		tmp_loc->accuracy < 0) {
+ 		kfree(tmp_loc);
+ 		return -EINVAL;
+ 	}	
+
+
 	write_lock(&gps_lock);
-//	printk(KERN_ERR "write_lock held");
 	
 	memcpy(&curr_gps_location, tmp_loc, sizeof(*tmp_loc));
-//	printk(KERN_ERR "memcpy");
 
 	write_unlock(&gps_lock);
 
