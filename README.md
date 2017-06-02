@@ -89,11 +89,20 @@ distance = diff * 111,644;  /* meter */
 if (distance > accuracy) permission_denied();
 else permission_granted();
 ```
-There were some utilization in our actual kernel code. We couldn't use `sqrt()` function, so instead, we decided permission to grant or not by comparing their squared values. Also because of range limitation of primitive variables, we decided to divide some factors instead of multiplying. Also, the devision operator didn't work well, so we just shift right 17 times(131,072) instead of dividing 111,644.
+There were some utilization in our actual kernel code. We couldn't use `sqrt()` function, so instead, we compared as squared values. Also because of range limitation of primitive variables, we decided to divide some factors instead of multiplying. Also, the devision operator didn't work well, so we just shift right 17 times(131,072) instead of dividing 111,644.
 
 Fortunately, the assumptions above can cover whole earth surface pretty accurately.
 
 ## 4. user space programs
-how the permission is granted. 
+`gpsupdate.c` updates the kernel's `gps_location` value by getting coordinates from user. It calls `sys_set_gps_location` inside.
+`file_loc.c` gets the pathname as string from user, and prints out the coordinates and google maps url. It calls `sys_get_gps_location` inside.
 
 # Lessons Learned
+## How file system works
+We've already learnt about concepts of file system. Also we've heard some file systems : ntfs, fat32, etc. But we couldn't know how they are designed and works. By upgrading geo-tagged ext2 file system, we had to look around the file systems - inside the `/root/fs`. We could know where `struct inode` is used for, and which data is inside.
+
+## How to upgrade new file system
+We could understand how the file system and `inode_operations` are modulated. `inode_operations` have several file system function pointers inside, and other file system kernel codes can use it effectively. Whether some other kernel code is handling directories, special I/O devices, etc.
+
+## How to manage file's permission
+By calculating file and devices location information, we had to grant permission to user. By doing that, we could understand how permission can be granted or not, and where in the kernel code should be modified and updated to manage permission appropriately.
