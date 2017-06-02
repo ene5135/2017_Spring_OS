@@ -30,7 +30,7 @@ int set_gps_location(struct gps_location __user *loc);
 As you can see, the system call get's only a `gps_location` argument from user. By getting user space's data safely, we used `copy_from_user` and `access_ok` functions. And the kernel's `gps_location` is updated as same as the user's value. By protecting the kernel's location variable, we locked it by `write_lock`. Also this system call checks whether the user's `gps_location` value is appropriate or not.
 
 ### 2-2. `sys_get_gps_location`
-This system call gets a file's path from user and give user back the corresponding file's `gps_location`. By find out corresponding `inode`, we used `user_path` function. `user_path` is kernel safe function, which uses `copy_from_user` inside.
+This system call gets a file's path from user and give user back the corresponding file's `gps_location`. To find out corresponding `inode`, we used `user_path` function. `user_path` is kernel safe function. It calls `strncpy_from_user`, which is copies pathname from user safely.
 ```c
 asmlinkage long sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
@@ -49,7 +49,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname, struct gps_loc
   ...
 }
 ```
-Also this system call calls the `inode_permission` like above, to checkout whether the file is okay to be read by user. If the system call decides that this file is forbidden to user, than `gps_location` of the file will not be returned.
+Also this system call calls the `inode_permission` like above, which is not specified in project document, to checkout whether the file is okay to be read by user. If the system call decides that this file is forbidden to user, than `gps_location` of the file will not be returned.
 
 ## 3. `ext2_inode_operations` implementation
 Like previous scheduler project, we have to implement three functions for `ext2` file system and link it to the `struct inode_operations`. There are several files which links the specific file system function pointers to global file system function, but we just linked only one file, `file.c`.
