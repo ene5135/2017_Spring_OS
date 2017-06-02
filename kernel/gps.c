@@ -46,13 +46,14 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 {
 	struct path fp;
 	struct inode *inode;
-	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
+	struct gps_location *tmp_loci = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
+	int err=0;
 //	char *pname;
-	int len;
+	//int len;
 
-	int debug=0;
+//	int debug=0;
 
-	len = strlen_user(pathname);
+	//len = strlen_user(pathname);
 
 	//pname = kzalloc(sizeof(char __user) * (len+1), GFP_KERNEL);
 	//copy_from_user(pname, pathname, sizeof(char __user) * (len+1));
@@ -78,13 +79,25 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 
 	
 	inode = fp.dentry->d_inode;
-	
-	if (inode->i_op->get_gps_location(inode, tmp_loc) < 0) {
+
+	if (!inode->i_op->get_gps_location) // if it is not ext2fs
+	{
 		kfree(tmp_loc);
-//		kfree(pname);
-//		printk(KERN_DEBUG "get_gps_location() part\n");
 		return -ENODEV;
 	}
+
+	else // check permission first, and then get return value
+	{
+		err = inode_permission(inode,MAY_READ);
+		if(err < 0)
+		{
+			kfree(tmp_loc);
+			return err;
+		}
+		inode->i_op->get_gps_location(inode, tmp_loc);
+	}
+
+
 	
 	copy_to_user(loc, tmp_loc, sizeof(*tmp_loc));
 
