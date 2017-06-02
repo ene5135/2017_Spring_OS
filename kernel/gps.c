@@ -54,11 +54,6 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 
 	int debug=0;
 
-	struct gps_location *tmp_loc;
-	char *pname;
-	int len;
-	tmp_loc = NULL;
-	pname = NULL;
 	len = strlen_user(pathname);
 
 	//pname = kzalloc(sizeof(char __user) * (len+1), GFP_KERNEL);
