@@ -19,7 +19,7 @@ asmlinkage long sys_set_gps_location(struct gps_location __user *loc)
 	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 
 //	printk(KERN_ERR "tmp_loc kmalloced\n");
-	struct gps_location *tmp_loc = NULL;
+//	struct gps_location *tmp_loc = NULL;
 	
 	if (copy_from_user(tmp_loc, loc, sizeof(*tmp_loc)) < 0) {
 		kfree(tmp_loc);
@@ -48,34 +48,22 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 {
 	struct path fp;
 	struct inode *inode;
-	struct gps_location *tmp_loci = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
+	struct gps_location *tmp_loc = kmalloc(sizeof(struct gps_location), GFP_KERNEL);
 	int err=0;
-//	char *pname;
-	//int len;
-
-//	int debug=0;
-
-	//len = strlen_user(pathname);
-
-	//pname = kzalloc(sizeof(char __user) * (len+1), GFP_KERNEL);
-	//copy_from_user(pname, pathname, sizeof(char __user) * (len+1));
-	//strncpy_from_user(pname,pathname,len);
-	//debug = user_path(pathname, &fp);
 
 ///////////////////////////////////////
 
 	// atleasta0
-	// user_path() must receive (char __user *) type path name.	otherwise it causes error.(-EFAULT)
+	// user_path() must receive (char __user *) type path name.	
+	// otherwise it causes error.(-EFAULT)
 	// plus, in user_path(), it calls strncpy_from_user(),
 	// that means we don't need to use copy_from_user() function and so on.
 
 //////////////////////////////////////
 
 	if (user_path(pathname, &fp) < 0) {
-//	if (debug < 0) {
 		kfree(tmp_loc);
-//		kfree(pname);
-		printk(KERN_DEBUG "errno = %d\n",debug);
+		printk(KERN_ALERT "ERROR : USER_PATH");
 		return -EACCES;
 	}
 
@@ -85,6 +73,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 	if (!inode->i_op->get_gps_location) // if it is not ext2fs
 	{
 		kfree(tmp_loc);
+		printk(KERN_ALERT "ERROR : NOT EXT2"); 
 		return -ENODEV;
 	}
 
@@ -94,6 +83,7 @@ asmlinkage long sys_get_gps_location(const char __user *pathname,
 		if(err < 0)
 		{
 			kfree(tmp_loc);
+			printk(KERN_ALERT "ERROR : PERMISSION DENIED");
 			return err;
 		}
 		inode->i_op->get_gps_location(inode, tmp_loc);

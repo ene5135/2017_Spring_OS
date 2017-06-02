@@ -25,8 +25,8 @@ int main(int argc, char* argv[]) {
 	int lng_fractional = (lng - lng_integer) * 1000000;
 
 
-	printf("lat_int : %d  lat_flo : %d\nlng_int : %d	lng_flo : %d\n", 
-			lat_integer, lat_fractional, lng_integer, lng_fractional);
+	printf("latitude : %d.%d\n lngitude : %d.%d\n accuracy : %d\n", 
+			lat_integer, lat_fractional, lng_integer, lng_fractional, acc);
 
 	struct gps_location *loc = malloc(sizeof(struct gps_location));
 
