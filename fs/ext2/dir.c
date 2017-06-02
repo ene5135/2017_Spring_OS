@@ -578,7 +578,7 @@ got_it:
 
 
 	if(dir->i_op->set_gps_location)
-		dir->i_op->set_gps_operation(dir); // atleasta0 
+		dir->i_op->set_gps_location(dir); // atleasta0 
 	// called in ext2_add_nondir, ext2_link, ext2_mkdir, ext2_rename
 	EXT2_I(dir)->i_flags &= ~EXT2_BTREE_FL;
 	mark_inode_dirty(dir);

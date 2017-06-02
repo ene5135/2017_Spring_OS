@@ -78,7 +78,6 @@ struct sigaltstack;
 #include <linux/key.h>
 #include <trace/syscall.h>
 
-#include <linux/gps.h>
 
 /*
  * __MAP - apply a macro to syscall arguments
