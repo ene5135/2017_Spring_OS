@@ -99,6 +99,7 @@ Fortunately, the assumptions above can cover whole earth surface pretty accurate
 
 ## 5. output
 ![output](output.JPG)
+
 We implemented two files. The first file, named `Hallasan`, actually points Hallasan in jeju island. The second file, named `my_home`, points my home. You can see details above. 
 
 # Lessons Learned
