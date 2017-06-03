@@ -97,6 +97,10 @@ Fortunately, the assumptions above can cover whole earth surface pretty accurate
 `gpsupdate.c` updates the kernel's `gps_location` value by getting coordinates from user. It calls `sys_set_gps_location` inside.
 `file_loc.c` gets the pathname as string from user, and prints out the coordinates and google maps url. It calls `sys_get_gps_location` inside.
 
+## 5. output
+![output](output.JPG)
+We implemented two files. The first file, named `Hallasan`, actually points Hallasan in jeju island. The second file, named `my_home`, points my home. You can see details above. 
+
 # Lessons Learned
 ## How file system works
 We've already learnt about concepts of file system. Also we've heard some file systems : ntfs, fat32, etc. But we couldn't know how they are designed and works. By upgrading geo-tagged ext2 file system, we had to look around the file systems - inside the `/root/fs`. We could know where `struct inode` is used for, and which data is inside.
