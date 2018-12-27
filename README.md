@@ -1,7 +1,7 @@
-# 2017_Spring_OS
+# Tizen OS (linux based) customization  
 
-Tizen OS (linux based) customization   
-See links below
+2017_Spring_OS course  
+For details, see links below
 
 [PROJ 1](https://github.com/ene5135/2017_Spring_OS/tree/proj1)  
 [PROJ 2](https://github.com/ene5135/2017_Spring_OS/tree/proj2)  
